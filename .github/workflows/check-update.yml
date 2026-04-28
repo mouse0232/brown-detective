@@ -1,0 +1,218 @@
+# GitHub Actions - 自动检查 CreepJS 更新
+# 使用方法：
+# 1. 自动触发：每天早上 9 点检查
+# 2. 手动触发：Actions 面板 → "Check CreepJS Update" → Run workflow
+
+name: Check CreepJS Update
+
+on:
+  # 定时触发：每天 UTC 时间 9:00（北京时间 17:00）
+  schedule:
+    - cron: '0 9 * * *'
+  
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: '强制更新（即使没有新版本）'
+        required: false
+        default: 'false'
+        type: boolean
+      
+      notify_email:
+        description: '接收通知的邮箱（可选）'
+        required: false
+        type: string
+
+  # 推送触发（测试用）
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/check-update.yml'
+
+env:
+  OFFICIAL_URL: 'https://abrahamjuliot.github.io/creepjs/creep.js'
+  LOCAL_FILE: 'docs/creep.js'
+  BACKUP_DIR: 'backups/${{ github.run_id }}'
+
+jobs:
+  check-update:
+    name: Check for Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      update_available: ${{ steps.check.outputs.update_available }}
+      official_hash: ${{ steps.check.outputs.official_hash }}
+      local_hash: ${{ steps.check.outputs.local_hash }}
+      file_size: ${{ steps.check.outputs.file_size }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Download official version
+        id: download
+        run: |
+          echo "📥 Downloading official CreepJS..."
+          curl -sSL "$OFFICIAL_URL" -o official-latest.js
+          
+          # 验证下载
+          if [ ! -f official-latest.js ]; then
+            echo "❌ Download failed"
+            exit 1
+          fi
+          
+          FILE_SIZE=$(wc -c < official-latest.js)
+          echo "📊 File size: $FILE_SIZE bytes"
+          
+          if [ $FILE_SIZE -lt 100000 ]; then
+            echo "❌ File size too small, download may be corrupted"
+            exit 1
+          fi
+          
+          echo "file_size=$FILE_SIZE" >> $GITHUB_OUTPUT
+          echo "✅ Download successful"
+      
+      - name: Check for updates
+        id: check
+        run: |
+          echo "🔍 Checking for updates..."
+          
+          # 计算 Hash
+          OFFICIAL_HASH=$(sha256sum official-latest.js | cut -d' ' -f1)
+          
+          if [ -f "$LOCAL_FILE" ]; then
+            LOCAL_HASH=$(sha256sum "$LOCAL_FILE" | cut -d' ' -f1)
+          else
+            LOCAL_HASH="none"
+          fi
+          
+          echo "Official hash: $OFFICIAL_HASH"
+          echo "Local hash: $LOCAL_HASH"
+          
+          # 输出到 GitHub
+          echo "official_hash=$OFFICIAL_HASH" >> $GITHUB_OUTPUT
+          echo "local_hash=$LOCAL_HASH" >> $GITHUB_OUTPUT
+          
+          # 判断是否更新
+          if [ "$OFFICIAL_HASH" != "$LOCAL_HASH" ]; then
+            echo "✅ UPDATE_AVAILABLE=true"
+            echo "update_available=true" >> $GITHUB_OUTPUT
+          else
+            if [ "${{ github.event.inputs.force_update }}" == "true" ]; then
+              echo "⚠️ FORCED_UPDATE=true (no actual update)"
+              echo "update_available=false" >> $GITHUB_OUTPUT
+            else
+              echo "✅ Already up to date"
+              echo "update_available=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Create backup
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          echo "💾 Creating backup..."
+          mkdir -p "$BACKUP_DIR"
+          
+          if [ -f "$LOCAL_FILE" ]; then
+            cp "$LOCAL_FILE" "$BACKUP_DIR/creep.js.backup"
+            echo "✅ Backup created: $BACKUP_DIR/creep.js.backup"
+          else
+            echo "ℹ️ No local file to backup"
+          fi
+      
+      - name: Generate update report
+        id: report
+        if: steps.check.outputs.update_available == 'true'
+        run: |
+          echo "📝 Generating update report..."
+          
+          cat > update-report.md << 'EOF'
+# CreepJS Update Report
+
+## Version Information
+- **Check Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+- **Official Hash**: ${{ steps.check.outputs.official_hash }}
+- **Local Hash**: ${{ steps.check.outputs.local_hash }}
+- **File Size**: ${{ steps.download.outputs.file_size }} bytes
+
+## Changes
+Auto-generated update report. Please review the changes before merging.
+
+## Checklist
+- [ ] Test FP ID generation
+- [ ] Test API endpoints
+- [ ] Test creep-lite.js
+- [ ] Verify examples work
+- [ ] Update CHANGELOG.md
+EOF
+          
+          echo "✅ Report generated"
+      
+      - name: Upload official file as artifact
+        if: steps.check.outputs.update_available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-creepjs
+          path: official-latest.js
+          retention-days: 7
+      
+      - name: Create issue if update available
+        if: steps.check.outputs.update_available == 'true'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: '🔄 [Auto] CreepJS 官方版本更新检测'
+          content-filepath: .github/UPDATE_TEMPLATE.md
+          labels: |
+            update
+            automation
+            priority-medium
+          assignees: ${{ github.repository_owner }}
+      
+      - name: Send notification (Email)
+        if: |
+          steps.check.outputs.update_available == 'true' &&
+          github.event.inputs.notify_email != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: '🔄 CreepJS Update Available'
+          to: ${{ github.event.inputs.notify_email }}
+          from: 'GitHub Actions'
+          body: |
+            CreepJS 官方版本已更新
+            
+            文件大小：${{ steps.download.outputs.file_size }} bytes
+            官方 Hash: ${{ steps.check.outputs.official_hash }}
+            本地 Hash: ${{ steps.check.outputs.local_hash }}
+            
+            请查看：https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      
+      - name: Summary
+        run: |
+          echo "## 📊 Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update Available**: ${{ steps.check.outputs.update_available }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **File Size**: ${{ steps.download.outputs.file_size }} bytes" >> $GITHUB_STEP_SUMMARY
+          echo "- **Official Hash**: \`${{ steps.check.outputs.official_hash }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Local Hash**: \`${{ steps.check.outputs.local_hash }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check.outputs.update_available }}" == "true" ]; then
+            echo "✅ 发现新版本！已创建 Issue 并上传文件。" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ 已是最新版本。" >> $GITHUB_STEP_SUMMARY
+          fi

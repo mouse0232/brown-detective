@@ -1,0 +1,265 @@
+{
+  "fingerprints": {
+    "5b93ab5f9a17dec838bb6e60b6636972fd8455a81cecea5401afba1fd0ff732f": {
+      "firstSeen": 1777347050818,
+      "lastSeen": 1777347051182,
+      "visitCount": 2,
+      "fingerprint": {
+        "navigator": {
+          "platform": "Win32",
+          "system": "Windows",
+          "userAgentParsed": "Chrome 147",
+          "device": "Windows 10 (64-bit)",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+          "uaPostReduction": true,
+          "appVersion": "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+          "deviceMemory": 32,
+          "doNotTrack": null,
+          "hardwareConcurrency": 16,
+          "language": "zh-CN, en (zh-CN)",
+          "maxTouchPoints": 0,
+          "vendor": "Google Inc.",
+          "mimeTypes": [
+            "application/pdf",
+            "text/pdf"
+          ],
+          "plugins": [
+            {
+              "name": "PDF Viewer",
+              "description": "Portable Document Format",
+              "filename": "internal-pdf-viewer"
+            },
+            {
+              "name": "Chrome PDF Viewer",
+              "description": "Portable Document Format",
+              "filename": "internal-pdf-viewer"
+            },
+            {
+              "name": "Chromium PDF Viewer",
+              "description": "Portable Document Format",
+              "filename": "internal-pdf-viewer"
+            },
+            {
+              "name": "Microsoft Edge PDF Viewer",
+              "description": "Portable Document Format",
+              "filename": "internal-pdf-viewer"
+            },
+            {
+              "name": "WebKit built-in PDF",
+              "description": "Portable Document Format",
+              "filename": "internal-pdf-viewer"
+            }
+          ],
+          "properties": [
+            "vendorSub",
+            "productSub",
+            "vendor",
+            "maxTouchPoints",
+            "scheduling",
+            "userActivation",
+            "geolocation",
+            "doNotTrack",
+            "webkitTemporaryStorage",
+            "webkitPersistentStorage",
+            "hardwareConcurrency",
+            "cookieEnabled",
+            "appCodeName",
+            "appName",
+            "appVersion",
+            "platform",
+            "product",
+            "userAgent",
+            "language",
+            "languages",
+            "onLine",
+            "webdriver",
+            "plugins",
+            "mimeTypes",
+            "pdfViewerEnabled",
+            "connection",
+            "getGamepads",
+            "javaEnabled",
+            "sendBeacon",
+            "vibrate",
+            "windowControlsOverlay",
+            "deprecatedRunAdAuctionEnforcesKAnonymity",
+            "protectedAudience",
+            "bluetooth",
+            "clipboard",
+            "credentials",
+            "keyboard",
+            "managed",
+            "mediaDevices",
+            "serviceWorker",
+            "virtualKeyboard",
+            "wakeLock",
+            "deviceMemory",
+            "userAgentData",
+            "locks",
+            "storage",
+            "gpu",
+            "login",
+            "ink",
+            "mediaCapabilities",
+            "devicePosture",
+            "hid",
+            "mediaSession",
+            "permissions",
+            "presentation",
+            "serial",
+            "usb",
+            "xr",
+            "storageBuckets",
+            "adAuctionComponents",
+            "runAdAuction",
+            "canLoadAdAuctionFencedFrame",
+            "canShare",
+            "share",
+            "clearAppBadge",
+            "getBattery",
+            "getUserMedia",
+            "requestMIDIAccess",
+            "requestMediaKeySystemAccess",
+            "setAppBadge",
+            "webkitGetUserMedia",
+            "clearOriginJoinedAdInterestGroups",
+            "createAuctionNonce",
+            "joinAdInterestGroup",
+            "leaveAdInterestGroup",
+            "updateAdInterestGroups",
+            "deprecatedReplaceInURN",
+            "deprecatedURNToURL",
+            "getInstalledRelatedApps",
+            "getInterestGroupAdAuctionData",
+            "registerProtocolHandler",
+            "unregisterProtocolHandler"
+          ],
+          "userAgentData": {
+            "architecture": "x86",
+            "bitness": "64",
+            "brands": [
+              "Google Chrome"
+            ],
+            "brandsVersion": [
+              "Google Chrome 147"
+            ],
+            "mobile": false,
+            "model": "",
+            "platform": "Windows",
+            "platformVersion": "19.0.0",
+            "uaFullVersion": "147.0.7727.103"
+          },
+          "bluetoothAvailability": true,
+          "permissions": {
+            "granted": [
+              "accelerometer",
+              "background-fetch",
+              "background-sync",
+              "gyroscope",
+              "magnetometer",
+              "screen-wake-lock"
+            ],
+            "unknown": [
+              "ambient-light-sensor",
+              "bluetooth",
+              "clipboard",
+              "device-info",
+              "gamepad",
+              "nfc",
+              "push",
+              "speaker",
+              "speaker-selection"
+            ],
+            "prompt": [
+              "camera",
+              "display-capture",
+              "geolocation",
+              "microphone",
+              "midi",
+              "notifications",
+              "persistent-storage"
+            ]
+          },
+          "webgpu": {
+            "adapterInfo": [
+              "amd",
+              "rdna-3",
+              "",
+              ""
+            ],
+            "limits": {
+              "maxTextureDimension1D": 16384,
+              "maxTextureDimension2D": 16384,
+              "maxTextureDimension3D": 2048,
+              "maxTextureArrayLayers": 2048,
+              "maxBindGroups": 4,
+              "maxBindGroupsPlusVertexBuffers": 24,
+              "maxBindingsPerBindGroup": 1000,
+              "maxDynamicUniformBuffersPerPipelineLayout": 10,
+              "maxDynamicStorageBuffersPerPipelineLayout": 8,
+              "maxSampledTexturesPerShaderStage": 48,
+              "maxSamplersPerShaderStage": 16,
+              "maxStorageBuffersPerShaderStage": 16,
+              "maxStorageTexturesPerShaderStage": 8,
+              "maxUniformBuffersPerShaderStage": 12,
+              "maxUniformBufferBindingSize": 65536,
+              "maxStorageBufferBindingSize": 2147483644,
+              "minUniformBufferOffsetAlignment": 256,
+              "minStorageBufferOffsetAlignment": 256,
+              "maxVertexBuffers": 8,
+              "maxBufferSize": 2147483648,
+              "maxVertexAttributes": 30,
+              "maxVertexBufferArrayStride": 2048,
+              "maxInterStageShaderVariables": 28,
+              "maxColorAttachments": 8,
+              "maxColorAttachmentBytesPerSample": 128,
+              "maxComputeWorkgroupStorageSize": 32768,
+              "maxComputeInvocationsPerWorkgroup": 1024,
+              "maxComputeWorkgroupSizeX": 1024,
+              "maxComputeWorkgroupSizeY": 1024,
+              "maxComputeWorkgroupSizeZ": 64,
+              "maxComputeWorkgroupsPerDimension": 65535,
+              "maxStorageBuffersInFragmentStage": 16,
+              "maxStorageTexturesInFragmentStage": 8,
+              "maxStorageBuffersInVertexStage": 16,
+              "maxStorageTexturesInVertexStage": 8
+            }
+          },
+          "lied": false,
+          "$hash": "b8b5f7466082f25a3dece600a0b724b160bd6e448afd5374abc6e13a3e36b58d"
+        },
+        "screen": {
+          "width": 1920,
+          "height": 1080,
+          "availWidth": 1920,
+          "availHeight": 1032,
+          "colorDepth": 32,
+          "pixelDepth": 32,
+          "touch": false,
+          "lied": false,
+          "$hash": "32aa7017a937e599c711ff15e0cfde7334946a5003b640d62f37d52056669908"
+        },
+        "timezone": {
+          "zone": "中国标准时间",
+          "location": "Asia, Shanghai",
+          "locationMeasured": "Asia, Shanghai",
+          "locationEpoch": -27028713943000,
+          "offset": -480,
+          "offsetComputed": -480,
+          "lied": false,
+          "$hash": "0847a2f2f0a57b2bc56fe71e845367a7b15864669d662fc6072b92530398c379"
+        }
+      },
+      "riskHistory": [
+        {
+          "timestamp": 1777347050818,
+          "riskScore": 0,
+          "level": "minimal",
+          "decision": "ALLOW"
+        }
+      ]
+    }
+  },
+  "blacklist": [],
+  "whitelist": []
+}

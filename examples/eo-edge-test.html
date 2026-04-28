@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>腾讯 EO EdgeScript - 直连测试版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: sans-serif;
+            background: linear-gradient(135deg, #0052d9, #266fd9);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #0052d9; text-align: center; margin-bottom: 20px; }
+        .input-group { margin: 20px 0; }
+        .input-group label { display: block; font-weight: 600; margin-bottom: 8px; }
+        .input-group input {
+            width: 100%; padding: 12px; border: 2px solid #ddd;
+            border-radius: 6px; font-size: 14px;
+        }
+        .input-group input:focus { border-color: #0052d9; outline: none; }
+        .btn {
+            width: 100%; background: #0052d9; color: white; border: none;
+            padding: 12px; border-radius: 6px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 10px;
+        }
+        .btn:hover { background: #003cac; }
+        .btn.secondary { background: #6c757d; }
+        .result {
+            margin-top: 20px; padding: 15px; border-radius: 8px;
+            background: #f5f5f5; font-size: 13px;
+        }
+        .result pre {
+            background: #2d2d2d; color: #f0f0f0; padding: 10px;
+            border-radius: 4px; overflow-x: auto; font-size: 12px;
+        }
+        .status { padding: 10px; border-radius: 6px; margin: 15px 0; font-weight: 600; }
+        .status.info { background: #e3f2fd; color: #1565c0; }
+        .status.success { background: #e8f5e9; color: #2e7d32; }
+        .status.error { background: #ffebee; color: #c62828; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔒 EO EdgeScript 测试</h1>
+        
+        <div id="step1">
+            <div class="input-group">
+                <label>1️⃣ EdgeScript 地址（必填）</label>
+                <input type="text" id="eoUrl" placeholder="https://your-domain.com/api/fingerprint">
+            </div>
+            
+            <div class="input-group">
+                <label>2️⃣ creep-lite.js 路径（本地测试用）</label>
+                <input type="text" id="creepPath" value="/docs/creep-lite.js" placeholder="/docs/creep-lite.js">
+            </div>
+            
+            <button class="btn" onclick="loadAndTest()">🚀 加载并测试</button>
+        </div>
+        
+        <div id="loading" class="status info hidden">
+            正在加载 creep-lite.js...
+        </div>
+        
+        <div id="result" class="result hidden"></div>
+        
+        <!-- 动态加载的脚本容器 -->
+        <div id="script-container"></div>
+    </div>
+
+    <script>
+        let CreepLiteFn = null;
+        
+        function loadAndTest() {
+            const eoUrl = document.getElementById('eoUrl').value.trim();
+            const creepPath = document.getElementById('creepPath').value.trim();
+            
+            if (!eoUrl) {
+                alert('请输入 EdgeScript 地址');
+                return;
+            }
+            
+            // 显示加载状态
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            
+            // 动态加载 creep-lite.js
+            const script = document.createElement('script');
+            script.src = creepPath;
+            script.onload = () => {
+                setTimeout(() => runTest(eoUrl), 500);
+            };
+            script.onerror = () => {
+                document.getElementById('loading').className = 'status error';
+                document.getElementById('loading').textContent = '❌ creep-lite.js 加载失败，请检查路径';
+            };
+            document.getElementById('script-container').appendChild(script);
+        }
+        
+        async function runTest(eoUrl) {
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('result');
+            
+            try {
+                // 检查是否加载成功
+                if (!window.CreepLite) {
+                    throw new Error('window.CreepLite 不存在，请检查 creep-lite.js 是否正确加载');
+                }
+                
+                loadingEl.textContent = '正在采集指纹...';
+                
+                // 采集指纹
+                const fp = await window.CreepLite({
+                    apiEndpoint: null,
+                    cacheEnabled: false
+                });
+                
+                loadingEl.textContent = '✅ 指纹采集完成，正在发送到 EdgeScript...';
+                
+                // 发送到 EdgeScript
+                const response = await fetch(eoUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fingerprint: fp })
+                });
+                
+                const result = await response.json();
+                
+                // 显示结果
+                loadingEl.classList.add('hidden');
+                resultEl.classList.remove('hidden');
+                resultEl.innerHTML = `
+                    <div class="status success">✅ 测试成功</div>
+                    <div><strong>🆔 指纹 ID:</strong><br><code style="word-break:break-all;">${fp.fingerprintId || 'N/A'}</code></div>
+                    <div style="margin-top: 10px;"><strong>📊 分析结果:</strong></div>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                    <button class="btn secondary" onclick="location.reload()" style="margin-top: 15px;">🔄 重新测试</button>
+                `;
+                
+            } catch (error) {
+                loadingEl.className = 'status error';
+                loadingEl.textContent = '❌ 错误：' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

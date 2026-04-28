@@ -1,0 +1,232 @@
+# GitHub Actions - 自动应用 CreepJS 更新
+# 使用方法：
+# 1. 手动触发：Actions 面板 → "Apply CreepJS Update" → Run workflow
+# 2. 或在 check-update.yml 创建的 Issue 中评论：/apply-update
+
+name: Apply CreepJS Update
+
+on:
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（可选，用于记录）'
+        required: false
+        type: string
+      
+      skip_tests:
+        description: '跳过测试（不推荐）'
+        required: false
+        default: 'false'
+        type: boolean
+  
+  # Issue 评论触发
+  issue_comment:
+    types: [created]
+
+jobs:
+  # 从 Issue 评论触发
+  trigger-from-issue:
+    if: |
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '/apply-update') &&
+      github.event.issue.user.login == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      trigger: ${{ steps.check.outputs.trigger }}
+    steps:
+      - name: Check comment
+        id: check
+        run: echo "trigger=true" >> $GITHUB_OUTPUT
+
+  # 下载并应用更新
+  apply-update:
+    needs: trigger-from-issue
+    if: always() && (needs.trigger-from-issue.result == 'success' || github.event_name == 'workflow_dispatch')
+    name: Apply Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          pnpm install
+      
+      - name: Download official files
+        id: download
+        run: |
+          echo "📥 Downloading official CreepJS files..."
+          
+          # 下载主要文件
+          curl -sSL "https://abrahamjuliot.github.io/creepjs/creep.js" -o docs/creep.js
+          curl -sSL "https://abrahamjuliot.github.io/creepjs/creep.js" -o public/creep.js
+          curl -sSL "https://abrahamjuliot.github.io/creepjs/" -o docs/index.html
+          curl -sSL "https://abrahamjuliot.github.io/creepjs/style.min.css" -o docs/style.min.css
+          
+          # 验证
+          CREEP_SIZE=$(wc -c < docs/creep.js)
+          echo "📊 creep.js size: $CREEP_SIZE bytes"
+          
+          if [ $CREEP_SIZE -lt 100000 ]; then
+            echo "❌ Download failed - file too small"
+            exit 1
+          fi
+          
+          echo "✅ Download successful"
+          echo "file_size=$CREEP_SIZE" >> $GITHUB_OUTPUT
+      
+      - name: Rebuild creep-lite.js
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "🔨 Rebuilding creep-lite.js..."
+          pnpm build:lite
+          
+          # 验证构建
+          if [ ! -f docs/creep-lite.js ]; then
+            echo "❌ Build failed - creep-lite.js not found"
+            exit 1
+          fi
+          
+          LITE_SIZE=$(wc -c < docs/creep-lite.js)
+          echo "📊 creep-lite.js size: $LITE_SIZE bytes"
+          echo "✅ Build successful"
+      
+      - name: Run tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "🧪 Running tests..."
+          
+          # 启动测试服务器
+          node server.js &
+          SERVER_PID=$!
+          sleep 3
+          
+          # 测试健康检查
+          echo "Testing API health..."
+          curl -s http://localhost:8000/api/health > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "❌ API health check failed"
+            kill $SERVER_PID
+            exit 1
+          fi
+          echo "✅ API health check passed"
+          
+          # 测试静态文件
+          echo "Testing static files..."
+          curl -s http://localhost:8000/docs/creep.js > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "❌ Static file serving failed"
+            kill $SERVER_PID
+            exit 1
+          fi
+          echo "✅ Static file serving passed"
+          
+          # 停止服务器
+          kill $SERVER_PID
+          echo "✅ All tests passed"
+      
+      - name: Create backup
+        run: |
+          echo "💾 Creating backup..."
+          BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+          mkdir -p "$BACKUP_DIR"
+          
+          # 备份当前版本（如果有）
+          git show HEAD:docs/creep.js > "$BACKUP_DIR/creep.js.backup" 2>/dev/null || true
+          
+          echo "✅ Backup created: $BACKUP_DIR"
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: |
+            chore: update CreepJS official files
+            
+            Auto-update from official CreepJS
+            
+            File size: ${{ steps.download.outputs.file_size }} bytes
+          title: '🔄 [Auto] Update CreepJS to latest version'
+          body: |
+            ## 🔄 CreepJS 官方版本更新
+            
+            此 PR 自动更新了 CreepJS 官方文件。
+            
+            ### 更新内容
+            - ✅ docs/creep.js
+            - ✅ public/creep.js
+            - ✅ docs/index.html
+            - ✅ docs/style.min.css
+            
+            ### 文件信息
+            - **大小**: ${{ steps.download.outputs.file_size }} bytes
+            - **更新时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            
+            ### ✅ 自动化测试
+            - [x] 文件下载验证
+            - [x] creep-lite.js 重新构建
+            - [ ] API 功能测试（需要人工验证）
+            - [ ] FP ID 一致性测试（需要人工验证）
+            
+            ### 📋 合并前检查清单
+            请完成以下人工测试后再合并：
+            
+            - [ ] 访问主页，确认 FP ID 正常显示
+            - [ ] 测试 API 端点 `/api/fingerprint` 正常工作
+            - [ ] 检查 creep-lite.js 指纹采集正常
+            - [ ] 验证示例页面正常工作
+            
+            ### 📝 更新日志
+            请在此处简要说明更新内容：
+            
+            ---
+            
+            *此 PR 由 GitHub Actions 自动创建*
+          labels: |
+            update
+            automation
+            priority-medium
+          branch: auto-update-creepjs
+          delete-branch: true
+          base: main
+      
+      - name: Comment on issue
+        if: github.event_name == 'issue_comment'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ✅ 更新已应用！
+            
+            已创建 Pull Request: ${{ env.PULL_REQUEST_URL }}
+            
+            请完成人工测试后合并。
+            
+            ---
+            *Auto-generated by GitHub Actions*
+      
+      - name: Summary
+        run: |
+          echo "## 📊 Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ 官方文件已下载并应用" >> $GITHUB_STEP_SUMMARY
+          echo "📦 文件大小: ${{ steps.download.outputs.file_size }} bytes" >> $GITHUB_STEP_SUMMARY
+          echo "🔨 creep-lite.js 已重新构建" >> $GITHUB_STEP_SUMMARY
+          echo "📝 Pull Request 已创建" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**下一步**: 请查看 PR 并完成人工测试后合并" >> $GITHUB_STEP_SUMMARY

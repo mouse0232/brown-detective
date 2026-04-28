@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>指纹稳定性测试</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
+    .container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    .test-box { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 6px; }
+    .success { background: #d4edda; border-color: #28a745; }
+    .error { background: #f8d7da; border-color: #dc3545; }
+    .warning { background: #fff3cd; border-color: #ffc107; }
+    pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; margin: 10px 0; }
+    button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin: 5px; }
+    button:hover { background: #0056b3; }
+    button.secondary { background: #6c757d; }
+    .result { margin: 10px 0; }
+    .stat { display: inline-block; margin: 10px 20px; padding: 10px; background: #f8f9fa; border-radius: 6px; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #007bff; }
+    .stat-label { font-size: 12px; color: #666; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f8f9fa; font-weight: 600; }
+    .match { color: #28a745; font-weight: bold; }
+    .different { color: #dc3545; font-weight: bold; }
+    .fp-id { font-family: monospace; font-size: 12px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔬 指纹稳定性测试</h1>
+    <p>测试指纹采集的稳定性和缓存机制</p>
+
+    <div style="margin: 20px 0;">
+      <button onclick="runStabilityTest()">运行稳定性测试（5 次）</button>
+      <button onclick="testCache()">测试缓存机制</button>
+      <button class="secondary" onclick="clearCache()">清除缓存</button>
+      <button class="secondary" onclick="showCacheInfo()">查看缓存信息</button>
+    </div>
+
+    <div id="results"></div>
+
+    <div class="test-box warning">
+      <h3>📊 稳定性说明</h3>
+      <ul>
+        <li><strong>稳定 ID:</strong> 使用 6 个核心特征（navigator, screen, canvas2d, canvasWebgl, timezone, fonts）</li>
+        <li><strong>详细 ID:</strong> 使用 12 个特征（包含 headless, lies, audio 等）</li>
+        <li><strong>理想情况:</strong> 短时间内多次采集，稳定 ID 应该相同</li>
+        <li><strong>可能的变化:</strong> 某些特征（如 audio、canvas）可能有微小差异</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/docs/creep-lite.js"></script>
+  <script>
+    async function runStabilityTest() {
+      const resultsEl = document.getElementById('results')
+      resultsEl.innerHTML = '<h2>📈 稳定性测试</h2><p>正在进行 5 次连续采集...</p>'
+      
+      const fingerprints = []
+      const times = []
+      
+      for (let i = 0; i < 5; i++) {
+        const startTime = performance.now()
+        const fp = await window.CreepLite({ 
+          cacheEnabled: false,  // 禁用缓存，测试真实采集
+          apiEndpoint: '/api/fingerprint',
+        })
+        const elapsed = performance.now() - startTime
+        
+        fingerprints.push(fp)
+        times.push(elapsed)
+        
+        console.log(`采集 ${i + 1}:`, fp.fingerprintId, elapsed.toFixed(2), 'ms')
+      }
+      
+      // 分析结果
+      const stableIds = fingerprints.map(fp => fp.fingerprintId)
+      const detailedIds = fingerprints.map(fp => fp.detailedFingerprintId)
+      
+      const uniqueStable = new Set(stableIds)
+      const uniqueDetailed = new Set(detailedIds)
+      
+      // 对比差异
+      const differences = []
+      for (let i = 1; i < fingerprints.length; i++) {
+        const diff = compareFingerprints(fingerprints[0], fingerprints[i])
+        if (diff.length > 0) {
+          differences.push({ index: i, differences: diff })
+        }
+      }
+      
+      let html = `
+        <div class="test-box ${uniqueStable.size === 1 ? 'success' : 'warning'}">
+          <h3>测试结果</h3>
+          <div class="stat">
+            <div class="stat-value">${uniqueStable.size}</div>
+            <div class="stat-label">不同的稳定 ID</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">${uniqueDetailed.size}</div>
+            <div class="stat-label">不同的详细 ID</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">${times[0].toFixed(0)}</div>
+            <div class="stat-label">平均采集时间 (ms)</div>
+          </div>
+          
+          <h4>稳定 ID（6 个核心特征）</h4>
+          <table>
+            <tr><th>采集</th><th>指纹 ID</th><th>哈希前 32 位</th></tr>
+            ${stableIds.map((id, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td class="fp-id">${id}</td>
+                <td class="${id === stableIds[0] ? 'match' : 'different'}">${id.substring(0, 32)}...</td>
+              </tr>
+            `).join('')}
+          </table>
+          
+          <h4>详细 ID（12 个特征）</h4>
+          <table>
+            <tr><th>采集</th><th>指纹 ID</th><th>哈希前 32 位</th></tr>
+            ${detailedIds.map((id, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td class="fp-id">${id}</td>
+                <td class="${id === detailedIds[0] ? 'match' : 'different'}">${id.substring(0, 32)}...</td>
+              </tr>
+            `).join('')}
+          </table>
+          
+          ${differences.length > 0 ? `
+            <h4>差异字段（第 1 次 vs 其他）</h4>
+            <ul>
+              ${differences.map(d => `
+                <li>第${d.index + 1}次：
+                  <ul>
+                    ${d.differences.map(field => `<li><code>${field}</code></li>`).join('')}
+                  </ul>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="match">✅ 所有采集结果完全一致！</p>'}
+        </div>
+      `
+      
+      resultsEl.innerHTML = html
+    }
+
+    async function testCache() {
+      const resultsEl = document.getElementById('results')
+      resultsEl.innerHTML = '<h2>💾 缓存测试</h2>'
+      
+      // 第一次采集（应该从服务器）
+      const start1 = performance.now()
+      const fp1 = await window.CreepLite({ 
+        cacheEnabled: true,
+        cacheTTL: 1800000,
+      })
+      const time1 = performance.now() - start1
+      
+      // 第二次采集（应该从缓存）
+      const start2 = performance.now()
+      const fp2 = await window.CreepLite({ 
+        cacheEnabled: true,
+        cacheTTL: 1800000,
+      })
+      const time2 = performance.now() - start2
+      
+      resultsEl.innerHTML += `
+        <div class="test-box success">
+          <h3>缓存测试结果</h3>
+          <p><strong>第 1 次采集:</strong> ${time1.toFixed(2)} ms</p>
+          <p><strong>第 2 次采集:</strong> ${time2.toFixed(2)} ms ${time2 < time1 * 0.1 ? '✅ (从缓存加载)' : '⚠️ (缓存可能未生效)'}</p>
+          <p><strong>指纹 ID 相同:</strong> ${fp1.fingerprintId === fp2.fingerprintId ? '✅ 是' : '❌ 否'}</p>
+          <p><strong>ID:</strong> <code class="fp-id">${fp1.fingerprintId}</code></p>
+        </div>
+      `
+    }
+
+    function clearCache() {
+      localStorage.removeItem('creepjs_lite_fingerprint')
+      alert('缓存已清除！下次采集将重新生成指纹。')
+    }
+
+    function showCacheInfo() {
+      const cacheKey = localStorage.getItem('creepjs_lite_fingerprint')
+      if (!cacheKey) {
+        alert('缓存为空')
+        return
+      }
+      
+      try {
+        const data = JSON.parse(cacheKey)
+        alert(`缓存时间: ${new Date(data.timestamp)}\n距离现在：${((Date.now() - data.timestamp) / 1000).toFixed(1)} 秒\n指纹 ID: ${data.fingerprint?.fingerprintId?.substring(0, 32)}...`)
+      } catch (e) {
+        alert('缓存解析失败：' + e.message)
+      }
+    }
+
+    function compareFingerprints(fp1, fp2, path = '') {
+      const diffs = []
+      const skipKeys = ['timestamp', 'collectionTime', 'fingerprintId', 'detailedFingerprintId']
+      
+      for (const key in fp1) {
+        if (skipKeys.includes(key)) continue
+        
+        const currentPath = path ? `${path}.${key}` : key
+        
+        if (typeof fp1[key] === 'object' && fp1[key] !== null && key !== '$hash') {
+          if (fp2[key] && typeof fp2[key] === 'object') {
+            diffs.push(...compareFingerprints(fp1[key], fp2[key], currentPath))
+          }
+        } else if (fp1[key] !== fp2[key]) {
+          diffs.push(currentPath)
+        }
+      }
+      
+      return diffs
+    }
+
+    // 页面加载时显示缓存状态
+    window.addEventListener('load', () => {
+      const cache = localStorage.getItem('creepjs_lite_fingerprint')
+      if (cache) {
+        console.log('缓存已存在:', JSON.parse(cache).fingerprint?.fingerprintId)
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,511 @@
+// 解读器逻辑
+let fingerprintData = null;
+
+function showLoading(text = '正在分析指纹数据...') {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('results').classList.remove('hidden');
+}
+
+function analyzeData() {
+    const fpId = document.getElementById('fingerprintIdInput').value.trim();
+    const jsonStr = document.getElementById('jsonInput').value.trim();
+
+    if (jsonStr) {
+        try {
+            fingerprintData = JSON.parse(jsonStr);
+            showResults();
+        } catch (e) {
+            alert('JSON 格式错误，请检查后重试\n\n错误：' + e.message);
+        }
+    } else if (fpId) {
+        fingerprintData = { fingerprintId: fpId, version: 'manual', timestamp: Date.now() };
+        showResults();
+    } else {
+        alert('请填写 FP ID 或粘贴完整 JSON 数据');
+    }
+}
+
+function loadFromStorage() {
+    showLoading('正在从本地存储加载...');
+    setTimeout(() => {
+        const stored = localStorage.getItem('creepjs_data');
+        if (stored) {
+            try {
+                fingerprintData = JSON.parse(stored);
+                showResults();
+            } catch (e) {
+                const possibleKeys = ['creepjs_fingerprint', 'creep_fingerprint', 'fingerprint_data', 'fp_data'];
+                for (const key of possibleKeys) {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        fingerprintData = JSON.parse(data);
+                        showResults();
+                        return;
+                    }
+                }
+                alert('未能从本地存储找到指纹数据');
+                hideLoading();
+            }
+        } else {
+            alert('本地存储中没有指纹数据\n请先访问官方 CreepJS 页面完成采集');
+            hideLoading();
+        }
+    }, 500);
+}
+
+function generateDemoData() {
+    showLoading('正在生成测试数据...');
+    setTimeout(() => {
+        fingerprintData = {
+            fingerprintId: 'demo_' + Math.random().toString(36).substring(2, 18),
+            version: 'lite',
+            timestamp: Date.now(),
+            collectionTime: 150 + Math.random() * 100,
+            navigator: {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                webdriver: navigator.webdriver || false,
+                hardwareConcurrency: navigator.hardwareConcurrency || 4,
+                deviceMemory: navigator.deviceMemory || 8,
+                maxTouchPoints: navigator.maxTouchPoints || 0
+            },
+            screen: {
+                width: screen.width,
+                height: screen.height,
+                availWidth: screen.availWidth,
+                availHeight: screen.availHeight,
+                colorDepth: screen.colorDepth,
+                pixelRatio: window.devicePixelRatio,
+                orientation: screen.orientation?.type || 'landscape-primary'
+            },
+            timezone: {
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                offset: -new Date().getTimezoneOffset() / 60,
+                language: Intl.DateTimeFormat().resolvedOptions().locale
+            },
+            webgl: {
+                vendor: 'Intel Inc.',
+                renderer: 'Intel Iris OpenGL Engine',
+                version: 'WebGL 1.0 (OpenGL ES 2.0)'
+            },
+            headless: { headless: false, riskLevel: 'low', selenium: false }
+        };
+        showResults();
+    }, 300);
+}
+
+function clearData() {
+    if (confirm('确定要清除当前的指纹数据吗？')) {
+        fingerprintData = null;
+        document.getElementById('fingerprintIdInput').value = '';
+        document.getElementById('jsonInput').value = '';
+        document.getElementById('results').classList.add('hidden');
+        alert('数据已清除');
+    }
+}
+
+function showResults() {
+    hideLoading();
+    const fpId = fingerprintData?.fingerprintId || 'N/A';
+    document.getElementById('fpIdDisplay').textContent = fpId;
+    document.getElementById('fpVersion').textContent = fingerprintData?.version || '-';
+    
+    const timestamp = fingerprintData?.timestamp;
+    if (timestamp) {
+        const date = new Date(timestamp);
+        document.getElementById('fpTimestamp').textContent = date.toLocaleString('zh-CN');
+    }
+
+    const duration = fingerprintData?.collectionTime;
+    if (duration) {
+        document.getElementById('fpDuration').textContent = Math.round(duration) + 'ms';
+        document.getElementById('collectionTime').textContent = Math.round(duration) + 'ms';
+    }
+
+    calculatePrivacyScore();
+    renderCategories();
+    renderAdvancedAnalysis();
+}
+
+function getRiskClass(score) {
+    if (score >= 40) return 'high';
+    if (score >= 20) return 'medium';
+    return 'low';
+}
+
+function getRiskText(level) {
+    const map = { 'low': '低', 'medium': '中', 'high': '高', 'critical': '严重' };
+    return map[level] || level;
+}
+
+function getUniqueBadge(value) {
+    if (typeof value === 'boolean') return value ? 'badge-warning' : 'badge-common';
+    if (typeof value === 'string' && value.length > 30) return 'badge-unique';
+    return 'badge-common';
+}
+
+function getUniqueLabel(value) {
+    if (typeof value === 'boolean') return value ? '⚠️ 异常' : '✅ 正常';
+    if (typeof value === 'string' && value.length > 30) return '🔍 高独特性';
+    return '📋 常见';
+}
+
+function getValueAtPath(obj, path) {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+}
+
+function calculatePrivacyScore() {
+    let totalScore = 0;
+    let detailScores = { browser: 0, hardware: 0, system: 0, behavior: 0, automation: 0 };
+    const tips = [];
+
+    if (fingerprintData?.headless) {
+        if (fingerprintData.headless.headless) {
+            detailScores.automation += 50;
+            tips.push({ icon: '🚨', title: '检测到无头浏览器', desc: '你正在使用无头模式，这会被所有网站识别为爬虫。建议：使用完整浏览器或专门的反检测浏览器。' });
+        }
+        if (fingerprintData.headless.selenium) {
+            detailScores.automation += 50;
+            tips.push({ icon: '⚠️', title: '检测到 Selenium', desc: 'Selenium 会留下大量痕迹。建议：使用 puppeteer-stealth 或 playwright 的隐藏模式。' });
+        }
+    }
+
+    if (fingerprintData?.navigator?.webdriver === true) {
+        detailScores.automation += 40;
+        tips.push({ icon: '🤖', title: 'WebDriver 特征暴露', desc: 'navigator.webdriver 为 true，这是自动化工具的铁证。' });
+    }
+
+    if (fingerprintData?.webgl?.renderer) {
+        detailScores.hardware += 25;
+        const renderer = fingerprintData.webgl.renderer;
+        if (/GeForce|Radeon/.test(renderer)) {
+            tips.push({ icon: '🎮', title: '独立显卡暴露', desc: '你的 GPU 型号是非常独特的识别特征。建议：使用浏览器扩展模糊 WebGL 信息。' });
+        }
+    }
+
+    if (fingerprintData?.canvas?.dataURL) {
+        detailScores.hardware += 30;
+        tips.push({ icon: '🎨', title: 'Canvas 指纹已采集', desc: 'Canvas 指纹是最稳定的生物特征之一。建议：使用 CanvasBlocker 等扩展添加随机噪声。' });
+    }
+
+    if (fingerprintData?.fonts?.list && fingerprintData.fonts.list.length > 20) {
+        detailScores.system += 20;
+        tips.push({ icon: '🔤', title: '字体列表过长', desc: '你安装了 ' + fingerprintData.fonts.list.length + ' 种字体，这会让你更独特。' });
+    }
+
+    totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
+
+    document.getElementById('privacyScore').textContent = totalScore;
+    document.getElementById('browserRisk').textContent = detailScores.browser;
+    document.getElementById('browserRisk').className = 'breakdown-value ' + getRiskClass(detailScores.browser);
+    document.getElementById('hardwareRisk').textContent = detailScores.hardware;
+    document.getElementById('hardwareRisk').className = 'breakdown-value ' + getRiskClass(detailScores.hardware);
+    document.getElementById('systemRisk').textContent = detailScores.system;
+    document.getElementById('systemRisk').className = 'breakdown-value ' + getRiskClass(detailScores.system);
+    document.getElementById('behaviorRisk').textContent = detailScores.behavior;
+    document.getElementById('behaviorRisk').className = 'breakdown-value ' + getRiskClass(detailScores.behavior);
+    document.getElementById('automationRisk').textContent = detailScores.automation;
+    document.getElementById('automationRisk').className = 'breakdown-value ' + getRiskClass(detailScores.automation);
+
+    const scoreDeg = (totalScore / 100) * 360;
+    document.querySelector('.score-circle').style.setProperty('--score-deg', scoreDeg + 'deg');
+
+    let level = '低暴露';
+    if (totalScore >= 70) level = '高风险 - 非常容易被追踪';
+    else if (totalScore >= 50) level = '较高暴露 - 容易被识别';
+    else if (totalScore >= 30) level = '中等暴露 - 需要注意';
+    else level = '低暴露 - 隐私保护良好';
+    document.getElementById('scoreLevel').textContent = level;
+
+    document.getElementById('uniquenessScore').textContent = totalScore >= 50 ? '高 (>95%)' : totalScore >= 30 ? '中 (50-95%)' : '低 (<50%)';
+    document.getElementById('stabilityScore').textContent = fingerprintData?.canvas ? '高 (Canvas 特征稳定)' : '中 (可能随时间变化)';
+
+    if (tips.length === 0) {
+        tips.push({ icon: '✅', title: '隐私保护良好', desc: '未检测到明显风险。继续保持良好习惯！' });
+        tips.push({ icon: '💡', title: '建议使用隐私浏览器', desc: '考虑使用 Brave、Firefox（严格模式）或 Tor Browser 进一步增强隐私。' });
+    } else {
+        tips.push({ icon: '💡', title: '防指纹扩展推荐', desc: 'CanvasBlocker、Chameleon、Trace 等扩展可以干扰指纹采集。' });
+    }
+
+    const tipsHtml = tips.map(tip => `
+        <div class="tip-item">
+            <div class="tip-icon">${tip.icon}</div>
+            <div class="tip-content">
+                <div class="tip-title">${tip.title}</div>
+                <div class="tip-desc">${tip.desc}</div>
+            </div>
+        </div>
+    `).join('');
+    document.getElementById('tipsGrid').innerHTML = tipsHtml;
+
+    renderRiskChart(detailScores);
+}
+
+function renderRiskChart(scores) {
+    const items = [
+        { label: '浏览器', value: scores.browser, max: 25 },
+        { label: '硬件', value: scores.hardware, max: 55 },
+        { label: '系统', value: scores.system, max: 20 },
+        { label: '行为', value: scores.behavior, max: 0 },
+        { label: '自动化', value: scores.automation, max: 100 }
+    ];
+
+    const html = items.map(item => {
+        const max = item.max || 100;
+        const percent = Math.min(100, (item.value / max) * 100);
+        let riskLevel = 'low';
+        if (percent >= 75) riskLevel = 'critical';
+        else if (percent >= 50) riskLevel = 'high';
+        else if (percent >= 25) riskLevel = 'medium';
+
+        return `
+            <div class="bar-item">
+                <div class="bar-label">${item.label}</div>
+                <div class="bar-track">
+                    <div class="bar-fill ${riskLevel}" style="width: ${percent}%"></div>
+                </div>
+                <div class="bar-value">${item.value}</div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('riskChart').innerHTML = html;
+}
+
+function renderCategories() {
+    const container = document.getElementById('categoriesContainer');
+    let html = '';
+
+    for (const [key, config] of Object.entries(INTERPRETATIONS)) {
+        const data = fingerprintData?.[key];
+        if (!data) continue;
+
+        html += `
+            <div class="category-section">
+                <div class="category-header">
+                    <div class="category-title">
+                        <span class="category-icon">${config.icon}</span>
+                        <span class="category-name">${config.name}</span>
+                    </div>
+                    <span class="category-risk risk-${config.riskLevel}">风险等级：${getRiskText(config.riskLevel)}</span>
+                </div>
+                <div class="metrics-grid">
+        `;
+
+        for (const [metricKey, metricConfig] of Object.entries(config.metrics)) {
+            const value = getValueAtPath(data, metricKey);
+            if (value === undefined || value === null) continue;
+
+            html += `
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-name">${metricConfig.name}</div>
+                        <span class="metric-badge ${getUniqueBadge(value)}">${getUniqueLabel(value)}</span>
+                    </div>
+                    <div class="metric-value-display">${formatValue(value)}</div>
+                    <div class="metric-explanation">
+                        <div class="explanation-section">
+                            <div class="explanation-title">💡 这意味着什么？</div>
+                            ${metricConfig.explanation}
+                        </div>
+                        <div class="explanation-section">
+                            <div class="explanation-title">🔬 深度解析</div>
+                            ${metricConfig.deepDive}
+                        </div>
+                        <div class="explanation-section">
+                            <div class="explanation-title">🔒 隐私影响</div>
+                            ${metricConfig.privacyImpact}
+                        </div>
+                        <div class="explanation-section">
+                            <div class="explanation-title">🎯 检测普遍性</div>
+                            ${metricConfig.detection}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div></div>';
+    }
+
+    container.innerHTML = html;
+}
+
+function formatValue(value) {
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (typeof value === 'string' && value.length > 100) return value.substring(0, 97) + '...';
+    if (Array.isArray(value)) return '共 ' + value.length + ' 项 | ' + value.slice(0, 3).join(', ') + (value.length > 3 ? '...' : '');
+    return String(value);
+}
+
+function renderAdvancedAnalysis() {
+    // 指纹分析
+    const analysisHtml = `
+        <div class="timeline-item">
+            <div class="timeline-time">采集完成</div>
+            <div class="timeline-content">
+                <strong>指纹 ID 已生成</strong><br>
+                基于 ${Object.keys(fingerprintData || {}).length} 个维度特征计算得出
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">特征评估</div>
+            <div class="timeline-content">
+                <strong>唯一性评估完成</strong><br>
+                你的指纹在全球用户中的独特程度：${document.getElementById('uniquenessScore').textContent}
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">风险评估</div>
+            <div class="timeline-content">
+                <strong>综合风险评分</strong><br>
+                ${document.getElementById('privacyScore').textContent} / 100 - ${document.getElementById('scoreLevel').textContent}
+            </div>
+        </div>
+    `;
+    document.getElementById('fingerprintAnalysis').innerHTML = analysisHtml;
+
+    // 检测机制
+    const detectionHtml = `
+        <div style="background: #f8f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <strong style="color: #e53e3e;">🚨 高风险检测点</strong>
+            <ul style="margin-top: 10px; color: #666; line-height: 1.8;">
+                <li><strong>WebDriver 检测</strong> - navigator.webdriver 属性，为 true 则 100% 被识别</li>
+                <li><strong>无头浏览器检测</strong> - Headless Chrome 特征，直接封禁</li>
+                <li><strong>Selenium痕迹</strong> -__selenium、callSeleniumFunction 等对象</li>
+                <li><strong>Canvas 指纹</strong> - 最稳定的识别特征，难以伪造</li>
+            </ul>
+        </div>
+        <div style="background: #ebf8ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <strong style="color: #3182ce;">⚠️ 中风险检测点</strong>
+            <ul style="margin-top: 10px; color: #666; line-height: 1.8;">
+                <li><strong>WebGL 渲染器</strong>-GPU 型号，高度独特</li>
+                <li><strong>字体列表</strong> - 安装的字体组合，较独特</li>
+                <li><strong>屏幕分辨率</strong> - 组合后的独特性中等</li>
+                <li><strong>时区与 IP</strong> - 不匹配时会被怀疑</li>
+            </ul>
+        </div>
+        <div style="background: #c6f6d5; padding: 15px; border-radius: 8px;">
+            <strong style="color: #276749;">✅ 低风险检测点</strong>
+            <ul style="margin-top: 10px; color: #666; line-height: 1.8;">
+                <li><strong>User Agent</strong> - 基础信息，容易伪造</li>
+                <li><strong>语言设置</strong> - 常见语言不独特</li>
+                <li><strong>CPU 核心数</strong> - 常见值不独特</li>
+            </ul>
+        </div>
+    `;
+    document.getElementById('detectionPoints').innerHTML = detectionHtml;
+
+    // 技术细节
+    if (fingerprintData) {
+        document.getElementById('technicalDetails').textContent = JSON.stringify(fingerprintData, null, 2);
+    }
+}
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+function compareFingerprints() {
+    const compareStr = document.getElementById('compareInput').value.trim();
+    if (!compareStr) {
+        alert('请粘贴第二个指纹 JSON');
+        return;
+    }
+
+    try {
+        const second = JSON.parse(compareStr);
+        const first = fingerprintData;
+
+        const changes = [];
+        const comparePath = (path, obj1, obj2) => {
+            const keys = path.split('.');
+            const val1 = keys.reduce((o, k) => o?.[k], obj1);
+            const val2 = keys.reduce((o, k) => o?.[k], obj2);
+            if (val1 !== undefined && val2 !== undefined && val1 !== val2) {
+                changes.push({ path, val1, val2 });
+            }
+        };
+
+        // 对比主要字段
+        ['navigator.userAgent', 'screen.width', 'screen.height', 'timezone.timezone', 'webgl.renderer'].forEach(path => {
+            comparePath(path, first, second);
+        });
+
+        const resultHtml = `
+            <div class="comparison-col">
+                <h4>第一次采集</h4>
+                <div style="font-size: 13px; color: #666;">FP ID: ${(first.fingerprintId || '').substring(0, 32)}...</div>
+                <div style="margin-top: 10px; font-size: 13px;">
+                    <strong>时间:</strong> ${first.timestamp ? new Date(first.timestamp).toLocaleString() : '-'}<br>
+                    <strong>版本:</strong> ${first.version || '-'}
+                </div>
+            </div>
+            <div class="comparison-col">
+                <h4>第二次采集</h4>
+                <div style="font-size: 13px; color: #666;">FP ID: ${(second.fingerprintId || '').substring(0, 32)}...</div>
+                <div style="margin-top: 10px; font-size: 13px;">
+                    <strong>时间:</strong> ${second.timestamp ? new Date(second.timestamp).toLocaleString() : '-'}<br>
+                    <strong>版本:</strong> ${second.version || '-'}
+                </div>
+            </div>
+        `;
+
+        if (changes.length === 0) {
+            resultHtml + `
+                <div style="grid-column: 1 / -1; background: #c6f6d5; padding: 20px; border-radius: 12px; text-align: center;">
+                    <strong style="color: #276749; font-size: 18px;">✅ 指纹完全一致</strong><br>
+                    <span style="color: #666;">两次采集的特征没有变化，说明你的浏览器配置稳定</span>
+                </div>
+            `;
+        } else {
+            resultHtml + `
+                <div style="grid-column: 1 / -1; background: #feebc8; padding: 20px; border-radius: 12px;">
+                    <strong style="color: #c05621; font-size: 18px;">⚠️ 检测到 ${changes.length} 处差异</strong>
+                    <div style="margin-top: 15px;">
+            `;
+            changes.forEach(change => {
+                resultHtml += `
+                    <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                        <strong>${change.path}</strong><br>
+                        <span style="color: #e53e3e;">第一次：${formatValue(change.val1)}</span><br>
+                        <span style="color: #38a169;">第二次：${formatValue(change.val2)}</span>
+                    </div>
+                `;
+            });
+            resultHtml += `</div></div>`;
+        }
+
+        const container = document.getElementById('comparisonResult');
+        container.innerHTML = resultHtml;
+        container.style.display = 'grid';
+    } catch (e) {
+        alert('JSON 格式错误：' + e.message);
+    }
+}
+
+// 页面加载时尝试自动加载
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const stored = localStorage.getItem('creepjs_data');
+        if (stored) {
+            try {
+                fingerprintData = JSON.parse(stored);
+                showResults();
+            } catch (e) {
+                console.log('自动加载失败，等待用户手动输入');
+            }
+        }
+    }, 2000);
+});
