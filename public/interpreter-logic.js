@@ -152,6 +152,22 @@ function getRiskText(level) {
     return map[level] || level;
 }
 
+function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
+    // 根据实际检测结果动态调整风险等级
+    if (categoryKey === 'headless') {
+        const isHeadless = data?.headless?.hasHeadlessUA || data?.headless?.webDriverIsOn || data?.headlessRating > 50;
+        return isHeadless ? 'critical' : 'low';
+    }
+    return defaultLevel;
+}
+
+function getDynamicRiskText(categoryKey, data, defaultLevel) {
+    const level = getDynamicRiskLevel(categoryKey, data, defaultLevel);
+    return getRiskText(level);
+}
+
+
+
 function getUniqueBadge(value) {
     if (typeof value === 'boolean') return value ? 'badge-warning' : 'badge-common';
     if (typeof value === 'string' && value.length > 30) return 'badge-unique';
@@ -303,7 +319,7 @@ function renderCategories() {
                         <span class="category-icon">${config.icon}</span>
                         <span class="category-name">${config.name}</span>
                     </div>
-                    <span class="category-risk risk-${config.riskLevel}">风险等级：${getRiskText(config.riskLevel)}</span>
+                    <span class="category-risk risk-${getDynamicRiskLevel(key, data, config.riskLevel)}">风险等级：${getDynamicRiskText(key, data, config.riskLevel)}</span>
                 </div>
                 <div class="metrics-grid">
         `;
