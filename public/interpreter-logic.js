@@ -173,18 +173,20 @@ function calculatePrivacyScore() {
     let detailScores = { browser: 0, hardware: 0, system: 0, behavior: 0, automation: 0 };
     const tips = [];
 
+    }
+
+    // creep-full.js headless 检测
     if (fingerprintData?.headless) {
-        if (fingerprintData.headless.headless) {
+        const isHeadless = fingerprintData.headless.headless?.hasHeadlessUA || 
+                          fingerprintData.headless.headless?.webDriverIsOn ||
+                          (fingerprintData.headlessRating && fingerprintData.headlessRating > 50);
+        if (isHeadless) {
             detailScores.automation += 50;
-            tips.push({ icon: '🚨', title: '检测到无头浏览器', desc: '你正在使用无头模式，这会被所有网站识别为爬虫。建议：使用完整浏览器或专门的反检测浏览器。' });
-        }
-        if (fingerprintData.headless.selenium) {
-            detailScores.automation += 50;
-            tips.push({ icon: '⚠️', title: '检测到 Selenium', desc: 'Selenium 会留下大量痕迹。建议：使用 puppeteer-stealth 或 playwright 的隐藏模式。' });
+            tips.push({ icon: '🚨', title: '检测到无头浏览器', desc: '你正在使用无头模式，这会被所有网站识别为爬虫。' });
         }
     }
 
-    if (fingerprintData?.navigator?.webdriver === true) {
+        if (fingerprintData?.navigator?.webdriver === true) {
         detailScores.automation += 40;
         tips.push({ icon: '🤖', title: 'WebDriver 特征暴露', desc: 'navigator.webdriver 为 true，这是自动化工具的铁证。' });
     }
