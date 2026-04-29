@@ -9405,10 +9405,6 @@
             throw new Error('Fingerprint failed!');
         }
         console.log("%c🔍 [CreepJS] 采集完成，正在导出到 window...", "color:#4cca9f;font-size:16px;font-weight:bold");
-        console.log("%c✔ loose fingerprint passed", "color:#4cca9f");
-        // 立即导出到 window（给 interpreter 使用）
-        window.Creep = JSON.parse(JSON.stringify(fp));
-        window.Fingerprint = JSON.parse(JSON.stringify(fp));
         console.groupCollapsed('Loose Fingerprint');
         console.log(fp);
         console.groupEnd();
@@ -9559,6 +9555,9 @@
             console.error(error.message);
         }) || [];
         const blankFingerprint = '0000000000000000000000000000000000000000000000000000000000000000';
+        // 导出到 window（包含 creepHash）
+        window.Creep = { ...JSON.parse(JSON.stringify(fp)), creepHash: creepHash || blankFingerprint };
+        window.Fingerprint = { ...JSON.parse(JSON.stringify(fp)), creepHash: creepHash || blankFingerprint };
         const el = document.getElementById('fingerprint-data');
         patch(el, html `
 	<div id="fingerprint-data">

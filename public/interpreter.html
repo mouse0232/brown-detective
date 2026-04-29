@@ -326,7 +326,7 @@
                             console.log('[Interpreter] ✅ 找到 window.Creep', window.Creep);
                             resolve({
                                 ...window.Creep,
-                                fingerprintId: window.Creep?.hash || window.Creep?.fingerprintId,
+                                fingerprintId: window.Creep?.creepHash || window.Creep?.hash || window.Creep?.fingerprintId,
                                 version: 'full',
                                 timestamp: Date.now()
                             });
