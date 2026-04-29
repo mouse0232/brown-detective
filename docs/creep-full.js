@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-    console.log("%c🚀 [CreepJS] 脚本开始加载...", "color:#667eea;font-size:14px;font-weight:bold");
 
     var _documentCurrentScript = typeof document !== 'undefined' ? document.currentScript : null;
     // @ts-expect-error
@@ -9404,7 +9403,7 @@
         if (!fp) {
             throw new Error('Fingerprint failed!');
         }
-        console.log("%c🔍 [CreepJS] 采集完成，正在导出到 window...", "color:#4cca9f;font-size:16px;font-weight:bold");
+        console.log('%c✔ loose fingerprint passed', 'color:#4cca9f');
         console.groupCollapsed('Loose Fingerprint');
         console.log(fp);
         console.groupEnd();
@@ -9555,12 +9554,6 @@
             console.error(error.message);
         }) || [];
         const blankFingerprint = '0000000000000000000000000000000000000000000000000000000000000000';
-        // 导出到 window（包含 creepHash）
-        window.Creep = { ...JSON.parse(JSON.stringify(fp)), creepHash: creepHash || blankFingerprint };
-        window.Fingerprint = { ...JSON.parse(JSON.stringify(fp)), creepHash: creepHash || blankFingerprint };
-        // 确保 creepHash 被设置
-        if (window.Creep) window.Creep.creepHash = creepHash || blankFingerprint;
-        if (window.Fingerprint) window.Fingerprint.creepHash = creepHash || blankFingerprint;
         const el = document.getElementById('fingerprint-data');
         patch(el, html `
 	<div id="fingerprint-data">
@@ -9691,6 +9684,11 @@
 				</div>
 			`);
             }).catch((err) => console.error(err));
+            // expose results to the window
+            // @ts-expect-error does not exist
+            window.Fingerprint = JSON.parse(JSON.stringify(fp));
+            // @ts-expect-error does not exist
+            window.Creep = JSON.parse(JSON.stringify(creep));
             const fuzzyFingerprint = await getFuzzyHash(fp);
             const fuzzyFpEl = document.getElementById('fuzzy-fingerprint');
             patch(fuzzyFpEl, html `
