@@ -117,8 +117,8 @@ const INTERPRETATIONS = {
     timezone: {
         name: '时区信息',
         icon: '🌍',
-        riskLevel: 'medium',
-        riskScore: 20,
+        riskLevel: 'low',
+        riskScore: 10,
         metrics: {
             timezone: {
                 name: '时区',
