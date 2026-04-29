@@ -158,6 +158,14 @@ function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
         const isHeadless = data?.headless?.hasHeadlessUA || data?.headless?.webDriverIsOn || data?.headlessRating > 50;
         return isHeadless ? 'critical' : 'low';
     }
+    // 字体列表：根据字体数量动态调整
+    if (categoryKey === 'fonts') {
+        const fontCount = (data?.fontFaceLoadFonts || data?.list || []).length;
+        // Windows 默认 10-20 种，Mac 200-300 种
+        if (fontCount < 50) return 'low';  // 正常范围
+        if (fontCount < 100) return 'medium';  // 较多
+        return 'high';  // 非常多，独特性高
+    }
     // 屏幕特征：根据分辨率常见程度动态调整
     if (categoryKey === 'screen') {
         const width = data?.width;
