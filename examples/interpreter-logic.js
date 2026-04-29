@@ -173,7 +173,6 @@ function calculatePrivacyScore() {
     let detailScores = { browser: 0, hardware: 0, system: 0, behavior: 0, automation: 0 };
     const tips = [];
 
-    }
 
     // creep-full.js headless 检测
     if (fingerprintData?.headless) {
