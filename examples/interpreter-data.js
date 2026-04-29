@@ -130,7 +130,7 @@ const INTERPRETATIONS = {
             offset: {
                 name: 'UTC 偏移',
                 explanation: '与 UTC 时间的分钟差',
-                deepDive: '中国是 -480（UTC+8），美国东部是 -300（UTC-5）。这个值应该与时区一致，不一致说明在伪造。',
+                deepDive: '中国是 UTC+8（北京时间），美国东部是 UTC-5（纽约时间）。这个值应该与时区一致，不一致说明在伪造。',
                 privacyImpact: '低 - 辅助验证',
                 detection: '中等'
             },
