@@ -364,6 +364,13 @@ function renderCategories() {
 }
 
 function formatValue(value, key = '') {
+    // 特殊处理 offset（UTC 偏移），转换成分数格式
+    if (key === 'offset' && typeof value === 'number') {
+        const hours = Math.abs(Math.floor(value / 60));
+        const minutes = Math.abs(value % 60);
+        const sign = value <= 0 ? '+' : '-';
+        return `UTC${sign}${hours}${minutes > 0 ? ':' + String(minutes).padStart(2, '0') : ''}`;
+    }
     // 特殊处理 headless.headless 对象
     if (key === 'headless' && typeof value === 'object' && value !== null) {
         const hasHeadless = value.hasHeadlessUA || value.webDriverIsOn;
