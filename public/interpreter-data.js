@@ -193,7 +193,7 @@ const INTERPRETATIONS = {
         riskLevel: 'high',
         riskScore: 60,
         metrics: {
-            list: {
+            fontFaceLoadFonts: {
                 name: '已安装字体',
                 explanation: '系统中安装的字体名称列表',
                 deepDive: '检测原理：创建一个 span 元素，设置特定字体，测量宽度。如果宽度变化说明字体存在。Windows 默认约 180 种字体，Mac 约 600 种，Linux 约 50-100 种。设计师/开发者安装了很多字体的话，组合会非常独特。',

@@ -202,9 +202,9 @@ function calculatePrivacyScore() {
         tips.push({ icon: '🎨', title: 'Canvas 指纹已采集', desc: 'Canvas 指纹是最稳定的生物特征之一。建议：使用 CanvasBlocker 等扩展添加随机噪声。' });
     }
 
-    if (fingerprintData?.fonts?.list && fingerprintData.fonts.list.length > 20) {
+    if (fingerprintData?.fonts?.fontFaceLoadFonts || fingerprintData?.fonts?.list && fingerprintData.fonts.fontFaceLoadFonts.length > 20) {
         detailScores.system += 20;
-        tips.push({ icon: '🔤', title: '字体列表过长', desc: '你安装了 ' + fingerprintData.fonts.list.length + ' 种字体，这会让你更独特。' });
+        tips.push({ icon: '🔤', title: '字体列表过长', desc: '你安装了 ' + fingerprintData.fonts.fontFaceLoadFonts.length + ' 种字体，这会让你更独特。' });
     }
 
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
