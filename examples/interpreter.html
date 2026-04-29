@@ -334,7 +334,7 @@
                             console.log('[Interpreter] ✅ 找到 window.Fingerprint', window.Fingerprint);
                             resolve({
                                 ...window.Fingerprint,
-                                fingerprintId: window.Fingerprint?.hash || window.Fingerprint?.fingerprintId,
+                                fingerprintId: window.Fingerprint?.creepHash || window.Fingerprint?.hash || window.Fingerprint?.fingerprintId,
                                 version: 'full',
                                 timestamp: Date.now()
                             });
