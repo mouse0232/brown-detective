@@ -1,5 +1,6 @@
 (function () {
     'use strict';
+    console.log("%c🚀 [CreepJS] 脚本开始加载...", "color:#667eea;font-size:14px;font-weight:bold");
 
     var _documentCurrentScript = typeof document !== 'undefined' ? document.currentScript : null;
     // @ts-expect-error
@@ -9403,7 +9404,11 @@
         if (!fp) {
             throw new Error('Fingerprint failed!');
         }
-        console.log('%c✔ loose fingerprint passed', 'color:#4cca9f');
+        console.log("%c🔍 [CreepJS] 采集完成，正在导出到 window...", "color:#4cca9f;font-size:16px;font-weight:bold");
+        console.log("%c✔ loose fingerprint passed", "color:#4cca9f");
+        // 立即导出到 window（给 interpreter 使用）
+        window.Creep = JSON.parse(JSON.stringify(fp));
+        window.Fingerprint = JSON.parse(JSON.stringify(fp));
         console.groupCollapsed('Loose Fingerprint');
         console.log(fp);
         console.groupEnd();
@@ -9687,6 +9692,9 @@
             // expose results to the window
             // @ts-expect-error does not exist
             window.Fingerprint = JSON.parse(JSON.stringify(fp));
+            // 提前导出到 window（确保 interpreter 能获取到）
+            window.Fingerprint = JSON.parse(JSON.stringify(fp));
+            window.Creep = JSON.parse(JSON.stringify(creep));
             // @ts-expect-error does not exist
             window.Creep = JSON.parse(JSON.stringify(creep));
             const fuzzyFingerprint = await getFuzzyHash(fp);
