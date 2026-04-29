@@ -186,8 +186,10 @@ function getDynamicRiskText(categoryKey, data, defaultLevel) {
 
 
 
-function getUniqueBadge(value) {
+function getUniqueBadge(value, key = '') {
     if (typeof value === 'boolean') return value ? 'badge-warning' : 'badge-common';
+    // User Agent 虽然长，但同一浏览器版本的所有用户都相同，不算高独特性
+    if (key === 'userAgent') return 'badge-common';
     if (typeof value === 'string' && value.length > 30) return 'badge-unique';
     return 'badge-common';
 }
@@ -350,7 +352,7 @@ function renderCategories() {
                 <div class="metric-card">
                     <div class="metric-header">
                         <div class="metric-name">${metricConfig.name}</div>
-                        <span class="metric-badge ${getUniqueBadge(value)}">${getUniqueLabel(value)}</span>
+                        <span class="metric-badge ${getUniqueBadge(value, metricKey)}">${getUniqueLabel(value)}</span>
                     </div>
                     <div class="metric-value-display">${formatValue(value, metricKey)}</div>
                     <div class="metric-explanation">

@@ -3,8 +3,8 @@ const INTERPRETATIONS = {
     navigator: {
         name: '浏览器信息',
         icon: '🌐',
-        riskLevel: 'medium',
-        riskScore: 25,
+        riskLevel: 'low',
+        riskScore: 15,
         metrics: {
             userAgent: {
                 name: '用户代理 (User Agent)',
