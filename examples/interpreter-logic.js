@@ -158,6 +158,24 @@ function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
         const isHeadless = data?.headless?.hasHeadlessUA || data?.headless?.webDriverIsOn || data?.headlessRating > 50;
         return isHeadless ? 'critical' : 'low';
     }
+    // 屏幕特征：根据分辨率常见程度动态调整
+    if (categoryKey === 'screen') {
+        const width = data?.width;
+        const height = data?.height;
+        // 1920x1080 是最常见的分辨率（约 20% 用户）
+        const isCommonResolution = (width === 1920 && height === 1080) || 
+                                   (width === 1366 && height === 768) ||
+                                   (width === 2560 && height === 1440);
+        // 可用尺寸与总尺寸差异小，说明是全屏或任务栏自动隐藏
+        const isFullscreen = Math.abs((data?.availWidth || 0) - (width || 0)) < 10 &&
+                            Math.abs((data?.availHeight || 0) - (height || 0)) < 10;
+        // 常见分辨率 + 全屏 = 低风险
+        if (isCommonResolution || isFullscreen) {
+            return 'low';
+        }
+        // 非标准分辨率 = 中等风险
+        return 'medium';
+    }
     return defaultLevel;
 }
 
