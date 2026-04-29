@@ -288,7 +288,10 @@
     <div id="fuzzy-fingerprint" style="display:none !important;"></div>
     <div id="status-info" style="display:none !important;"></div>
     <div id="webrtc-connection" style="display:none !important;"></div>
-    <script>
+    
+    <script src="interpreter-data.js"></script>
+    <script src="interpreter-logic.js"></script>
+<script>
         // 页面加载后自动采集并解读
         window.addEventListener('DOMContentLoaded', async () => {
             const loadingEl = document.getElementById('loading');
@@ -396,7 +399,5 @@
             }
         });
     </script>
-    <script src="interpreter-data.js"></script>
-    <script src="interpreter-logic.js"></script>
 </body>
 </html>
