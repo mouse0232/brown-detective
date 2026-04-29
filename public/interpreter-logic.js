@@ -317,7 +317,7 @@ function renderCategories() {
                         <div class="metric-name">${metricConfig.name}</div>
                         <span class="metric-badge ${getUniqueBadge(value)}">${getUniqueLabel(value)}</span>
                     </div>
-                    <div class="metric-value-display">${formatValue(value)}</div>
+                    <div class="metric-value-display">${formatValue(value, metricKey)}</div>
                     <div class="metric-explanation">
                         <div class="explanation-section">
                             <div class="explanation-title">💡 这意味着什么？</div>
@@ -346,10 +346,16 @@ function renderCategories() {
     container.innerHTML = html;
 }
 
-function formatValue(value) {
+function formatValue(value, key = '') {
+    // 特殊处理 headless.headless 对象
+    if (key === 'headless' && typeof value === 'object' && value !== null) {
+        const hasHeadless = value.hasHeadlessUA || value.webDriverIsOn;
+        return hasHeadless ? '⚠️ 检测到无头模式' : '✅ 正常浏览器';
+    }
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (typeof value === 'string' && value.length > 100) return value.substring(0, 97) + '...';
     if (Array.isArray(value)) return '共 ' + value.length + ' 项 | ' + value.slice(0, 3).join(', ') + (value.length > 3 ? '...' : '');
+    if (typeof value === 'object' && value !== null) return JSON.stringify(value);
     return String(value);
 }
 
