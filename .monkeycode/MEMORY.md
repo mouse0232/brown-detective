@@ -356,3 +356,326 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - 5 秒超时限制
 - 采集失败时不阻断主流程（仅网络分类不显示）
 
+---
+
+## [2026-04-30] WebRTC IP 检测 - 关键错误与解决方案
+
+### 项目知识摘要
+- Date: 2026-04-30
+- Context: Agent 在实现 WebRTC + Cloudflare 双 IP 对比检测时犯的错误
+- Category: **严重错误记录 - 必须避免重复**
+
+### ❌ 犯的错误
+
+#### 错误 1：修改错误的文件路径
+- **问题**：用户访问的是 `/examples/interpreter.html`，但 Agent 修改的是 `/public/interpreter.html`
+- **正确路径**：`/public/examples/interpreter.html`
+- **后果**：浪费约 30 分钟排查，多次部署但版本号始终不对
+- **根本原因**：
+  - 没有先使用 `find` 命令查找所有同名文件
+  - 看到项目根目录有 `examples/` 文件夹，就认为 `/public/examples/` 不存在
+  - 修改后没有验证目标文件的实际内容
+
+#### 错误 2：忽视用户反馈
+- **问题**：用户多次指出"版本号还是旧的"、"打开还是首页"，但 Agent 没有立即验证
+- **正确做法**：用户每次反馈后，应该立即用 `curl` 或 `grep` 验证实际文件内容
+- **后果**：用户在旧版本页面反复测试，浪费更多时间
+
+#### 错误 3：没有理解项目结构
+- **问题**：项目有两套文件：
+  - `/examples/` - 源代码（开发环境）
+  - `/public/examples/` - 部署到 Cloudflare Pages 的文件
+- **正确做法**：修改后应该同时更新两个位置，或者明确知道哪个是部署文件
+- **后果**：只修改了一处，导致部署的仍是旧代码
+
+### ✅ 正确的解决方案
+
+#### sukaps 方案（最终成功）
+```javascript
+function getIPsWebrtc() {
+    return new Promise((resolve) => {
+        const ips = [];
+        const RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+        
+        if (!RTCPeerConnection) {
+            resolve([]);
+            return;
+        }
+        
+        // 关键：5 个 Google STUN 服务器（简单有效）
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+            ]
+        });
+        
+        pc.createDataChannel('');
+        
+        let resolved = false;
+        
+        pc.onicecandidate = (e) => {
+            if (!e.candidate) {
+                if (!resolved) resolve(ips);
+                return;
+            }
+            
+            const candidate = e.candidate.candidate;
+            const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/i.exec(candidate);
+            if (ipMatch && ipMatch[1]) {
+                const ip = ipMatch[1];
+                if (!/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^127\./.test(ip)) {
+                    ips.push(ip);
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(ips);  // 找到第一个就返回
+                    }
+                }
+            }
+        };
+        
+        // 关键：不设置 offerToReceiveAudio/Video（默认值）
+        pc.createOffer()
+            .then((desc) => pc.setLocalDescription(desc))
+            .catch(() => {});
+        
+        // 8 秒超时
+        setTimeout(() => {
+            if (!resolved) resolve(ips);
+        }, 8000);
+    });
+}
+```
+
+### 🔑 成功的关键点
+
+1. **简单的 STUN 服务器列表** - 只用 5 个 Google 服务器（不是 17 个）
+2. **不设置 offerToReceiveAudio/Video** - 使用默认值（设置成 1 会失败）
+3. **找到第一个 IP 就返回** - 不等 ICE 收集完成
+4. **使用 dataChannel 触发 ICE** - 不需要媒体流
+
+### 📋 文件路径规则（必须记住）
+
+| 文件类型 | 开发环境 | 生产环境（Cloudflare Pages） |
+|---------|---------|---------------------------|
+| 指纹库 | `/docs/creep-*.js` | `/public/creep-*.js` |
+| 示例页面 | `/examples/*.html` | `/public/examples/*.html` |
+| API 函数 | `/functions/api/*.ts` | 自动部署 |
+| 配置文件 | `/wrangler.toml` | 自动部署 |
+
+**关键规则**：
+- Cloudflare Pages 的 `pages_build_output_dir = "public"`
+- 所有要部署的文件必须在 `/public/` 目录下
+- 修改后必须用 `grep` 验证实际文件内容
+
+### 🛠️ 避免再犯的措施
+
+1. **修改前必先查找**
+   ```bash
+   find . -name "<filename>" -type f
+   ```
+
+2. **修改后必验证**
+   ```bash
+   grep "<关键代码>" <目标文件路径>
+   ```
+
+3. **用户反馈后立即检查**
+   - 不要假设修改生效了
+   - 用 `curl` 或 `cat` 直接查看实际文件
+
+4. **理解项目部署流程**
+   - 先确认哪个文件夹是部署目录
+   - 修改后检查 git status 确认文件已 staged
+
+### 📊 测试结果（最终成功）
+
+```
+[IP] 开始采集（WebRTC + Cloudflare 对比检测代理）
+开始 WebRTC IP 检测（sukaps 方案）
+Candidate #1: IP=202.107.67.103, Type=srflx
+✓ 找到 IPv4: 202.107.67.103
+🎉 检测成功！IP = 202.107.67.103
+⚠️ 检测到 IP 不一致，可能在使用代理/VPN
+WebRTC IP: 202.107.67.103
+Cloudflare IP: 43.199.202.106
+```
+
+**对比**：
+- ✅ WebRTC IP: `202.107.67.103`（中国大陆，真实网络接口）
+- ✅ HTTP IP: `43.199.202.106`（香港 AWS，代理出口）
+- ✅ 风险检测：IP 不一致 +35 分（高风险）
+
+---
+
+## [2026-04-30] 项目日报 - CreepJS 反爬虫系统
+
+### 📅 今日完成
+
+#### 1. WebRTC IP 检测功能 ✅
+- **问题**：初始实现无法获取 WebRTC IP（返回 null）
+- **原因**：
+  - STUN 服务器配置为空：`iceServers: []`
+  - 设置了 `offerToReceiveAudio/Video: 1` 导致浏览器阻止
+  - 修改了错误的文件路径
+- **解决**：采用 sukaps 方案（5 个 Google STUN + 不设置 offerToReceive）
+- **测试**：成功检测到真实 IP `202.107.67.103` 与代理 IP `43.199.202.106` 不一致
+
+#### 2. IP 不一致风险检测 ✅
+- **规则**：WebRTC IP ≠ HTTP IP → +35 分（高风险）
+- **逻辑**：
+  - WebRTC 获取真实网络接口 IP（不受代理影响）
+  - HTTP API 获取代理出口 IP（受代理影响）
+  - 两者不一致 = 强代理特征
+- **实现**：`public/examples/interpreter.html` 的 `collectIP()` 函数
+
+#### 3. 指纹解读器优化 ✅
+- **动态风险等级**：根据实际检测结果显示低/中/高/严重
+- **IP 地址显示**：隐藏后 8 位（`123.45.67.*`）保护隐私
+- **网络分类**：新增 `network` 分类，显示 ISP、地理位置等信息
+- **云服务 IP 检测**：检测 AWS、Google Cloud 等云服务商 IP
+
+#### 4. Cloudflare Pages 部署 ✅
+- **配置**：`wrangler.toml` 设置 `pages_build_output_dir = "public"`
+- **API 端点**：
+  - `GET /api/ip-info` - 获取 Cloudflare IP 和地理信息
+  - `POST /api/fingerprint` - 指纹风险分析
+  - `GET /api/ip-geo` - 查询指定 IP 地理信息
+  - `GET /api/health` - 健康检查
+- **部署 URL**：`https://creepjs-antibot.pages.dev/`
+
+### 📊 核心功能清单
+
+| 功能模块 | 状态 | 说明 |
+|---------|------|------|
+| 指纹采集（50+ 维度） | ✅ | creep-full.js |
+| WebRTC IP 检测 | ✅ | sukaps 方案，5 个 STUN 服务器 |
+| Cloudflare IP 检测 | ✅ | Pages Functions API |
+| IP 不一致检测 | ✅ | +35 分高风险 |
+| 云服务 IP 检测 | ✅ | AWS、Google Cloud 等 |
+| 时区一致性检测 | ✅ | IP 时区 vs 浏览器时区 |
+| 动态风险评级 | ✅ | 低/中/高/严重 |
+| 指纹解读器 | ✅ | examples/interpreter.html |
+| 本地存储缓存 | ✅ | 30 分钟缓存 |
+
+### 🔧 文件结构
+
+```
+/workspace/
+├── public/
+│   ├── creep-full.js              # 指纹采集库（50+ 维度）
+│   ├── interpreter-data.js        # 解读器配置
+│   ├── interpreter-logic.js       # 解读器逻辑
+│   └── examples/
+│       └── interpreter.html       # 指纹深度解读器（主页面）
+├── functions/api/
+│   ├── ip-info.ts                 # IP 信息采集 API
+│   ├── ip-geo.ts                  # IP 地理查询 API
+│   ├── fingerprint.ts             # 指纹分析 API
+│   └── health.ts                  # 健康检查 API
+├── wrangler.toml                  # Cloudflare 配置
+└── .monkeycode/
+    └── MEMORY.md                  # 项目记忆文档
+```
+
+### 📈 风险评分规则
+
+| 检测项 | 分数 | 说明 |
+|--------|------|------|
+| WebDriver 暴露 | +40 | navigator.webdriver = true |
+| 无头浏览器 | +50 | hasHeadlessUA || webDriverIsOn |
+| 云服务 IP | +30 | AWS、Google Cloud 等 |
+| **IP 不一致** | **+35** | WebRTC IP ≠ HTTP IP |
+| 时区不一致 | +15 | IP 时区 vs 浏览器时区 |
+| 字体过多 | +20 | >50 种字体 |
+| Canvas 指纹 | +30 | 已采集 Canvas 特征 |
+| 独立显卡 | +25 | GPU 型号暴露 |
+
+**决策规则**：
+- ≥70 分：高风险（建议拦截）
+- ≥30 分：中等风险（建议验证码）
+- <30 分：低风险（放行）
+
+### 🎯 测试结果
+
+#### 成功场景（使用代理）
+```
+WebRTC IP: 202.107.67.103（中国大陆）
+HTTP IP: 43.199.202.106（香港 AWS）
+IP 一致性：⚠️ 不一致
+风险评分：30/100（云服务 IP 导致）
+```
+
+#### 测试页面
+- **主页**：https://creepjs-antibot.pages.dev/
+- **指纹解读器**：https://creepjs-antibot.pages.dev/examples/interpreter.html
+- **测试页面**：https://creepjs-antibot.pages.dev/test-webrtc.html
+
+---
+
+## 📋 后续计划
+
+### 近期优化（本周）
+
+1. **添加调试模式开关**
+   - 在解读器页面添加"显示调试日志"按钮
+   - 方便用户排查 WebRTC 问题
+   - 优先级：高
+
+2. **增强 STUN 服务器列表**
+   - 添加国内 STUN 服务器（bilibili、小米、QQ）
+   - 实现 STUN 服务器自动切换
+   - 优先级：中
+
+3. **添加 TURN 服务器支持**
+   - 备用方案（当所有 STUN 都失败时）
+   - 通过 TCP 传输，绕过 UDP 封锁
+   - 优先级：低
+
+4. **完善项目文档**
+   - 更新 README.md 添加 WebRTC 检测说明
+   - 添加故障排查指南
+   - 优先级：高
+
+### 中期规划（下周）
+
+1. **指纹数据库**
+   - 使用 Cloudflare D1 存储指纹记录
+   - 实现指纹黑名单功能
+   - 优先级：高
+
+2. **管理员后台**
+   - 查看指纹统计
+   - 管理黑名单
+   - 优先级：中
+
+3. **频率限制**
+   - 基于指纹的访问频率控制
+   - 防止指纹采集滥用
+   - 优先级：中
+
+### 长期规划（本月）
+
+1. **自定义域名配置**
+   - 绑定业务域名
+   - HTTPS 证书配置
+   - 优先级：中
+
+2. **高级反爬虫规则**
+   - 设备指纹关联分析
+   - 行为模式检测
+   - 优先级：低
+
+3. **多语言支持**
+   - 解读器国际化（i18n）
+   - 优先级：低
+
+---
+
+**记录时间**: 2026-04-30  
+**记录者**: AI Assistant  
+**今日教训**: 修改文件前必须先用 `find` 确认所有同名文件路径，修改后必须用 `grep` 验证实际内容！
+

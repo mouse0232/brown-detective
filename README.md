@@ -1,6 +1,12 @@
-# CreepJS 反爬虫指纹识别系统
+# 浏览器指纹反爬虫系统
 
-> 基于 CreepJS 的浏览器指纹采集与风险分析系统，支持腾讯 EO EdgeScript 边缘计算部署
+> 基于 CreepJS 的浏览器指纹采集与风险分析系统，支持 Cloudflare Pages 边缘计算部署
+
+---
+
+## 致谢
+
+本项目基于 [CreepJS](https://github.com/jhgg/creepjs) 修改，遵循 MIT 许可证。CreepJS 商标归原作者所有。
 
 ## 📋 目录
 
