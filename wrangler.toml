@@ -1,8 +1,0 @@
-name = "creepjs-antibot"
-compatibility_date = "2024-01-01"
-
-[site]
-bucket = "./public"
-
-[functions]
-directory = "./functions"
