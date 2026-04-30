@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC IP 测试</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+        #result { background: #16213e; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .success { color: #4affbd; }
+        .error { color: #ff5d5d; }
+        .info { color: #00b4ff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 WebRTC IP 测试（参考 sukaps 方案）</h1>
+    <div id="result">等待检测...</div>
+
+    <script>
+        const iceServers = [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun3.l.google.com:19302" },
+            { urls: "stun:stun4.l.google.com:19302" },
+        ];
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            document.getElementById('result').appendChild(div);
+            console.log(msg);
+        }
+
+        function getUserIPs() {
+            log('开始 WebRTC IP 检测...', 'info');
+            
+            const myPeerConnection = new RTCPeerConnection({ iceServers });
+            myPeerConnection.createDataChannel("");
+            myPeerConnection.createOffer().then((offer) => {
+                log('创建 Offer 成功', 'info');
+                return myPeerConnection.setLocalDescription(offer);
+            });
+
+            let ipAddresses = { ipv4: "null", ipv6: "null" };
+            let candidateCount = 0;
+
+            myPeerConnection.onicecandidate = function (event) {
+                if (!event.candidate) {
+                    log('ICE 收集完成', 'info');
+                    return;
+                }
+                
+                candidateCount++;
+                const parts = event.candidate.candidate.split(" ");
+                const ip = parts[4];
+                const type = parts[7];
+                
+                log(`Candidate #${candidateCount}: IP=${ip}, Type=${type}`, 'info');
+
+                // 简单的 IPv4 验证
+                const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                
+                if (ipv4Regex.test(ip) && ipAddresses.ipv4 === "null") {
+                    ipAddresses.ipv4 = ip;
+                    log(`✓ 找到 IPv4: ${ip}`, 'success');
+                }
+
+                // 只要找到一个有效 IP 就返回
+                if (ipAddresses.ipv4 !== "null") {
+                    log(`\n🎉 检测成功！`, 'success');
+                    log(`IPv4: ${ipAddresses.ipv4}`, 'success');
+                    
+                    // 更新到页面显示
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', 'https://api.ip.sb/ip', true);
+                    xhr.onreadystatechange = () => {
+                        if (xhr.readyState === 4) {
+                            const httpIP = xhr.responseText.trim();
+                            log(`\nHTTP 出口 IP: ${httpIP}`, 'info');
+                            
+                            if (httpIP !== ipAddresses.ipv4) {
+                                log(`\n⚠️ IP 不一致！检测到代理/VPN`, 'error');
+                                log(`WebRTC IP: ${ipAddresses.ipv4}`, 'success');
+                                log(`HTTP IP: ${httpIP}`, 'info');
+                            } else {
+                                log(`\n✅ IP 一致`, 'success');
+                            }
+                        }
+                    };
+                    xhr.send();
+                    
+                    return;
+                }
+            };
+
+            // 8 秒超时
+            setTimeout(() => {
+                if (ipAddresses.ipv4 === "null") {
+                    log('⏱️ 超时，未找到有效 IP', 'error');
+                }
+                myPeerConnection.close();
+            }, 8000);
+        }
+
+        getUserIPs();
+    </script>
+</body>
+</html>
