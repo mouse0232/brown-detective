@@ -376,7 +376,6 @@
                     return;
                 }
                 
-                // 使用 5 个 Google STUN 服务器（sukaps 方案）
                 const config = {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -390,22 +389,7 @@
                 debugLog('info', '使用 ' + config.iceServers.length + ' 个 STUN 服务器');
                 
                 const pc = new RTCPeerConnection(config);
-                
-                // 创建 DataChannel 触发 ICE
                 pc.createDataChannel('');
-                
-                // 创建 Offer（关键：不设置 offerToReceiveAudio/Video！）
-                pc.createOffer()
-                    .then((desc) => {
-                        debugLog('info', '创建 Offer 成功');
-                        return pc.setLocalDescription(desc);
-                    })
-                    .then(() => {
-                        debugLog('info', '设置本地描述成功，等待 ICE candidate...');
-                    })
-                    .catch((err) => {
-                        debugLog('error', '创建/设置 Offer 失败:', err);
-                    });
                 
                 let candidateCount = 0;
                 let resolved = false;
@@ -420,40 +404,47 @@
                     candidateCount++;
                     const parts = e.candidate.candidate.split(' ');
                     const ip = parts[4];
-                    const type = parts[7]; // host, srflx, prflx, relay
+                    const type = parts[7];
                     
                     debugLog('info', `Candidate #${candidateCount}: IP=${ip}, Type=${type}`);
                     
-                    // IPv4 验证
                     const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
                     
                     if (ipv4Regex.test(ip) && !/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^127\./.test(ip)) {
                         debugLog('success', `✓ 找到 IPv4: ${ip}`);
                         ips.push(ip);
                         
-                        // 找到第一个有效 IP 就返回
                         if (!resolved) {
                             resolved = true;
                             clearTimeout(timeoutTimer);
                             debugLog('success', `🎉 检测成功！IP = ${ip}`);
-                            pc.close();
+                            setTimeout(() => pc.close(), 100);
                             resolve([ip]);
                         }
                     }
                 };
                 
-                pc.onicegatheringstatechange = () => {
-                    debugLog('info', 'ICE 收集状态:', pc.iceGatheringState);
-                };
-                
-                // 8 秒超时
-                timeoutTimer = setTimeout(() => {
-                    if (!resolved) {
-                        debugLog('warn', '⏱️ 8 秒超时，找到 IPs:', ips);
-                        pc.close();
-                        resolve(ips);
-                    }
-                }, 8000);
+                // 创建 Offer 并设置本地描述
+                pc.createOffer()
+                    .then((desc) => {
+                        debugLog('info', '创建 Offer 成功，正在设置本地描述...');
+                        return pc.setLocalDescription(desc);
+                    })
+                    .then(() => {
+                        debugLog('info', '本地描述设置成功，启动 8 秒超时计时器');
+                        // 关键：在 setLocalDescription 完成后再启动超时
+                        timeoutTimer = setTimeout(() => {
+                            if (!resolved) {
+                                debugLog('warn', '⏱️ 8 秒超时，找到 IPs:', ips);
+                                pc.close();
+                                resolve(ips);
+                            }
+                        }, 8000);
+                    })
+                    .catch((err) => {
+                        debugLog('error', '创建/设置 Offer 失败:', err);
+                        resolve([]);
+                    });
             });
         }
         
