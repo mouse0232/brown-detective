@@ -300,12 +300,27 @@
                     return;
                 }
                 
-                const pc = new RTCPeerConnection({ iceServers: [] });
+                // sukaps 方案：5 个 Google STUN 服务器
+                const pc = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' },
+                    ]
+                });
+                
                 pc.createDataChannel('');
+                
+                let resolved = false;
                 
                 pc.onicecandidate = (e) => {
                     if (!e.candidate) {
-                        resolve(ips);
+                        if (!resolved) {
+                            resolved = true;
+                            resolve(ips);
+                        }
                         return;
                     }
                     
@@ -316,13 +331,25 @@
                         // 过滤内网 IP
                         if (!/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^127\./.test(ip)) {
                             ips.push(ip);
+                            if (!resolved) {
+                                resolved = true;
+                                resolve(ips);
+                            }
                         }
                     }
                 };
                 
-                pc.createOffer().then((desc) => {
-                    pc.setLocalDescription(desc);
-                }).catch(() => {});
+                pc.createOffer()
+                    .then((desc) => pc.setLocalDescription(desc))
+                    .catch(() => {});
+                
+                // 8 秒超时
+                setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(ips);
+                    }
+                }, 8000);
             });
         }
         
