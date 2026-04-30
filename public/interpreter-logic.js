@@ -231,16 +231,34 @@ function getDynamicRiskText(categoryKey, data, defaultLevel) {
 
 
 
-function getUniqueBadge(value, key = '') {
+function getUniqueBadge(value, key = '', categoryRiskLevel = 'low') {
     if (typeof value === 'boolean') return value ? 'badge-warning' : 'badge-common';
     // User Agent 虽然长，但同一浏览器版本的所有用户都相同，不算高独特性
     if (key === 'userAgent') return 'badge-common';
+    
+    // 特殊处理 IP 相关字段：根据整体网络风险等级决定 badge
+    if (key === 'ip' || key === 'ipWebrtc' || key === 'ipDual' || 
+        key === 'country' || key === 'region' || key === 'city' || key === 'isp' || key === 'timezone') {
+        if (categoryRiskLevel === 'high') return 'badge-warning';
+        if (categoryRiskLevel === 'medium') return 'badge-warning';
+        return 'badge-common';
+    }
+    
     if (typeof value === 'string' && value.length > 30) return 'badge-unique';
     return 'badge-common';
 }
 
-function getUniqueLabel(value) {
+function getUniqueLabel(value, key = '', categoryRiskLevel = 'low') {
     if (typeof value === 'boolean') return value ? '⚠️ 异常' : '✅ 正常';
+    
+    // 特殊处理 IP 相关字段：根据整体风险等级决定标签
+    if (key === 'ip' || key === 'ipWebrtc' || key === 'ipDual' || 
+        key === 'country' || key === 'region' || key === 'city' || key === 'isp' || key === 'timezone') {
+        if (categoryRiskLevel === 'high') return '⚠️ 高风险';
+        if (categoryRiskLevel === 'medium') return '⚠️ 中风险';
+        return '📋 常见';
+    }
+    
     if (typeof value === 'string' && value.length > 30) return '🔍 高独特性';
     return '📋 常见';
 }
@@ -432,11 +450,14 @@ function renderCategories() {
             }
             if (value === undefined || value === null) continue;
 
+            // 获取动态风险等级用于 badge 显示
+            const dynamicRiskLevel = getDynamicRiskLevel(key, data, config.riskLevel);
+
             html += `
                 <div class="metric-card">
                     <div class="metric-header">
                         <div class="metric-name">${metricConfig.name}</div>
-                        <span class="metric-badge ${getUniqueBadge(value, metricKey)}">${getUniqueLabel(value)}</span>
+                        <span class="metric-badge ${getUniqueBadge(value, metricKey, dynamicRiskLevel)}">${getUniqueLabel(value, metricKey, dynamicRiskLevel)}</span>
                     </div>
                     <div class="metric-value-display">${formatValue(value, metricKey)}</div>
                     <div class="metric-explanation">
