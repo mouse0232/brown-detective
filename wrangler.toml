@@ -1,6 +1,3 @@
 name = "creepjs-antibot"
 compatibility_date = "2024-01-01"
-
-# Pages 项目配置
-[site]
-bucket = "public"
+pages_build_output_dir = "public"
