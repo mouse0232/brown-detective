@@ -361,6 +361,7 @@
         window.IPInfoDual = { webrtc: null, http: null, mismatch: false };
         
         // WebRTC 获取真实 IP（不受代理/CDN 影响）
+        // 参考：https://www.browserscan.net/zh/webrtc
         function getIPsWebrtc() {
             return new Promise((resolve) => {
                 const ips = [];
@@ -375,65 +376,104 @@
                     return;
                 }
                 
-                // 添加 STUN 服务器（与 creep-full.js 一致）
+                // 使用 17 个 STUN 服务器（参考 browserscan.net）
                 const config = {
                     iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' },
                         { urls: 'stun:stun.cloudflare.com:3478' },
                         { urls: 'stun:stun.chat.bilibili.com:3478' },
                         { urls: 'stun:stun.miwifi.com:3478' },
-                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun.qq.com' },
+                        { urls: 'stun:stun.smartgslb.com:19302' },
+                        { urls: 'stun:stun.nextcloud.com:443' },
+                        { urls: 'stun:stun.syncthing.net' },
+                        { urls: 'stun:stunserver.stunprotocol.org:3478' },
+                        { urls: 'stun:freestun.net:5350' },
+                        { urls: 'stun:global.stun.twilio.com:3478' },
+                        { urls: 'stun:jp1.stun.twilio.com:3478' },
+                        { urls: 'stun:sg1.stun.twilio.com:3478' },
                     ]
                 };
                 
-                debugLog('info', '使用 STUN 服务器:', config.iceServers.map(s => s.urls));
+                debugLog('info', '使用 ' + config.iceServers.length + ' 个 STUN 服务器');
                 
                 const pc = new RTCPeerConnection(config);
-                pc.createDataChannel('');
+                
+                // 关键：创建 DataChannel 触发 ICE 流程
+                pc.createDataChannel('test');
+                
+                let completed = false;
+                let timeoutTimer = null;
                 
                 pc.onicecandidate = (e) => {
                     if (!e.candidate) {
-                        debugLog('info', 'ICE 候选收集完成，找到 IPs:', ips);
-                        resolve(ips);
+                        debugLog('info', 'ICE candidate 收集完成');
                         return;
                     }
                     
                     const candidate = e.candidate.candidate;
-                    debugLog('info', 'ICE candidate:', candidate.substring(0, 120) + '...');
+                    const parts = candidate.split(' ');
                     
-                    const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/i.exec(candidate);
-                    if (ipMatch && ipMatch[1]) {
-                        const ip = ipMatch[1];
-                        debugLog('info', '提取到 IP:', ip);
-                        // 过滤内网 IP
-                        if (!/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^127\./.test(ip)) {
-                            debugLog('success', '✓ 公网 IP:', ip);
+                    if (parts.length >= 8) {
+                        const ip = parts[4];
+                        const type = parts[7]; // host, srflx, prflx, relay
+                        
+                        debugLog('info', 'ICE candidate:', `IP=${ip}, Type=${type}`);
+                        
+                        // 只收集 srflx（STUN 反射）类型的 IP
+                        if (type === 'srflx' && !/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\.|^127\./.test(ip)) {
+                            debugLog('success', '✓ 找到公网 IP (srflx):', ip);
                             ips.push(ip);
-                        } else {
-                            debugLog('warn', '✗ 内网 IP（过滤）:', ip);
                         }
                     }
                 };
                 
-                pc.oniceconnectionstatechange = () => {
-                    debugLog('info', 'ICE 连接状态:', pc.iceConnectionState);
+                pc.onicegatheringstatechange = () => {
+                    debugLog('info', 'ICE 收集状态:', pc.iceGatheringState);
+                    
+                    if (pc.iceGatheringState === 'complete' && !completed) {
+                        completed = true;
+                        clearTimeout(timeoutTimer);
+                        debugLog('success', 'ICE 收集完成，共找到 ' + ips.length + ' 个 IP');
+                        pc.close();
+                        resolve(ips);
+                    }
                 };
                 
-                pc.createOffer()
+                pc.onconnectionstatechange = () => {
+                    debugLog('info', '连接状态:', pc.connectionState);
+                };
+                
+                // 创建 Offer（关键：设置 offerToReceiveAudio/Video）
+                pc.createOffer({
+                    offerToReceiveAudio: 1,
+                    offerToReceiveVideo: 1
+                })
                     .then((desc) => {
                         debugLog('info', '创建 Offer 成功');
-                        pc.setLocalDescription(desc);
+                        return pc.setLocalDescription(desc);
+                    })
+                    .then(() => {
+                        debugLog('info', '设置本地描述成功，等待 ICE candidate...');
                     })
                     .catch((err) => {
-                        debugLog('error', '创建 Offer 失败:', err);
+                        debugLog('error', '创建/设置 Offer 失败:', err);
                         resolve([]);
                     });
                 
-                // 5 秒超时保护
-                setTimeout(() => {
-                    debugLog('warn', '⏱️ 5 秒超时，当前找到 IPs:', ips);
-                    pc.close();
-                    resolve(ips);
-                }, 5000);
+                // 10 秒超时保护
+                timeoutTimer = setTimeout(() => {
+                    if (!completed) {
+                        completed = true;
+                        debugLog('warn', '⏱️ 10 秒超时，当前找到 IPs:', ips);
+                        pc.close();
+                        resolve(ips);
+                    }
+                }, 10000);
             });
         }
         
