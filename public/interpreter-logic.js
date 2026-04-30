@@ -139,6 +139,16 @@ function showResults() {
     calculatePrivacyScore();
     renderCategories();
     renderAdvancedAnalysis();
+    
+    // 等待 IP 采集完成后再次渲染
+    if (!window.IPInfoReady) {
+        const waitForIP = setInterval(() => {
+            if (window.IPInfoReady) {
+                clearInterval(waitForIP);
+                renderCategories();
+            }
+        }, 500);
+    }
 }
 
 function getRiskClass(score) {
@@ -172,8 +182,8 @@ function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
         const height = data?.height;
         // 1920x1080 是最常见的分辨率（约 20% 用户）
         const isCommonResolution = (width === 1920 && height === 1080) || 
-                                   (width === 1366 && height === 768) ||
-                                   (width === 2560 && height === 1440);
+                                    (width === 1366 && height === 768) ||
+                                    (width === 2560 && height === 1440);
         // 可用尺寸与总尺寸差异小，说明是全屏或任务栏自动隐藏
         const isFullscreen = Math.abs((data?.availWidth || 0) - (width || 0)) < 10 &&
                             Math.abs((data?.availHeight || 0) - (height || 0)) < 10;
@@ -183,6 +193,33 @@ function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
         }
         // 非标准分辨率 = 中等风险
         return 'medium';
+    }
+    // IP 网络信息：根据 IP 类型和一致性动态调整
+    if (categoryKey === 'network') {
+        const network = data || window.IPInfo;
+        if (!network) return defaultLevel;
+        
+        // 检测 IP 不一致（WebRTC vs Cloudflare）- 强代理特征 → 高风险
+        if (window.IPInfoDual?.mismatch) return 'high';
+        
+        // 检测云服务商（常见爬虫 IP 段）
+        const cloudProviders = ['amazon', 'google', 'microsoft', 'azure', 'aws', 'digitalocean', 'linode', 'vultr', 'ovh'];
+        const isp = (network.isp || '').toLowerCase();
+        const isCloudIP = cloudProviders.some(provider => isp.includes(provider));
+        
+        // 云服务 IP → 中风险
+        if (isCloudIP) return 'medium';
+        
+        // 检测时区一致性
+        const ipTimezone = network.timezone || '';
+        const browserTimezone = fingerprintData?.timezone?.timezone || '';
+        const timezoneMismatch = ipTimezone && browserTimezone && 
+                                 !ipTimezone.toLowerCase().includes(browserTimezone.split('/')[0].toLowerCase());
+        
+        // 时区不匹配 → 中风险
+        if (timezoneMismatch) return 'medium';
+        
+        return 'low';
     }
     return defaultLevel;
 }
@@ -251,6 +288,49 @@ function calculatePrivacyScore() {
     if (fontList.length > 50) {
         detailScores.system += 20;
         tips.push({ icon: '🔤', title: '字体列表过长', desc: '你安装了 ' + fontList.length + ' 种字体，这会让你更独特。建议：减少不必要的字体。' });
+    }
+
+    // IP 网络信息检测
+    const network = window.IPInfo;
+    if (network) {
+        // 检测云服务商 IP
+        const cloudProviders = ['amazon', 'google', 'microsoft', 'azure', 'aws', 'digitalocean', 'linode', 'vultr', 'ovh'];
+        const isp = (network.isp || '').toLowerCase();
+        const isCloudIP = cloudProviders.some(provider => isp.includes(provider));
+        
+        if (isCloudIP) {
+            detailScores.automation += 30;
+            tips.push({ icon: '☁️', title: '检测到云服务 IP', desc: '你的 IP 属于云服务商（' + network.isp + '），这通常用于爬虫或自动化脚本。建议使用家庭宽带或移动网络。' });
+        }
+        
+        // 检测时区一致性
+        const ipTimezone = network.timezone || '';
+        const browserTimezone = fingerprintData?.timezone?.timezone || '';
+        if (ipTimezone && browserTimezone && !ipTimezone.toLowerCase().includes(browserTimezone.split('/')[0].toLowerCase())) {
+            detailScores.behavior += 15;
+            tips.push({ icon: '🕐', title: '时区不一致', desc: '你的 IP 时区（' + ipTimezone + '）与浏览器时区（' + browserTimezone + '）不匹配，可能被识别为使用代理。建议：关闭代理或调整浏览器时区。' });
+        }
+        
+        // 检测 IP 不一致（WebRTC vs Cloudflare）- 强代理特征
+        if (window.IPInfoDual?.mismatch) {
+            detailScores.behavior += 35;
+            tips.push({ icon: '🔀', title: 'IP 地址不一致（强代理特征）', desc: 'WebRTC 获取的真实 IP（' + window.IPInfoDual.webrtc + '）与 Cloudflare 看到的 IP（' + window.IPInfoDual.http + '）不一致，这是使用代理/VPN 的强特征。建议：关闭代理或使用支持 WebRTC 控制的代理。' });
+        }
+    }
+        
+        // 检测时区一致性
+        const ipTimezone = network.timezone || '';
+        const browserTimezone = fingerprintData?.timezone?.timezone || '';
+        if (ipTimezone && browserTimezone && !ipTimezone.toLowerCase().includes(browserTimezone.split('/')[0].toLowerCase())) {
+            detailScores.behavior += 15;
+            tips.push({ icon: '🕐', title: '时区不一致', desc: '你的 IP 时区（' + ipTimezone + '）与浏览器时区（' + browserTimezone + '）不匹配，可能被识别为使用代理。建议：关闭代理或调整浏览器时区。' });
+        }
+        
+        // 检测 IP 不一致（WebRTC vs HTTP）
+        if (network.mismatch) {
+            detailScores.behavior += 25;
+            tips.push({ icon: '🔀', title: 'IP 地址不一致', desc: 'WebRTC IP（' + network.webrtcIP + '）与 HTTP API IP（' + network.httpIP + '）不一致，说明你可能在使用代理、VPN 或梯子。这是强代理特征。' });
+        }
     }
 
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
@@ -337,7 +417,11 @@ function renderCategories() {
     let html = '';
 
     for (const [key, config] of Object.entries(INTERPRETATIONS)) {
-        const data = fingerprintData?.[key];
+        let data = fingerprintData?.[key];
+        // network 分类使用 window.IPInfo
+        if (key === 'network') {
+            data = window.IPInfo;
+        }
         if (!data) continue;
 
         html += `
@@ -353,7 +437,15 @@ function renderCategories() {
         `;
 
         for (const [metricKey, metricConfig] of Object.entries(config.metrics)) {
-            const value = getValueAtPath(data, metricKey);
+            // network 分类特殊处理 ipWebrtc 和 ipDual
+            let value = getValueAtPath(data, metricKey);
+            if (key === 'network') {
+                if (metricKey === 'ipWebrtc') {
+                    value = window.IPInfoDual?.webrtc || null;
+                } else if (metricKey === 'ipDual') {
+                    value = window.IPInfoDual;
+                }
+            }
             if (value === undefined || value === null) continue;
 
             html += `
@@ -404,6 +496,40 @@ function formatValue(value, key = '') {
         const hasHeadless = value.hasHeadlessUA || value.webDriverIsOn;
         return hasHeadless ? '⚠️ 检测到无头模式' : '✅ 正常浏览器';
     }
+    // 特殊处理 IP 地址（隐藏后 8 位）
+    if ((key === 'ip' || key === 'ipWebrtc') && typeof value === 'string') {
+        const parts = value.split('.');
+        if (parts.length === 4) {
+            parts[2] = '*';
+            parts[3] = '*';
+            return parts.join('.');
+        }
+        return value;
+    }
+    // 特殊处理 ipDual（显示 IP 对比 + 地理位置对比）
+    if (key === 'ipDual') {
+        if (!value || (!value.webrtc && !value.http)) return '-';
+        
+        let result = '';
+        if (value.mismatch) {
+            result = `⚠️ 不一致（可能使用代理/VPN）\n`;
+            result += `\n🔴 WebRTC 真实 IP: ${value.webrtc || '-'}`;
+            if (value.webrtcGeo) {
+                result += `\n   位置：${value.webrtcGeo.country} ${value.webrtcGeo.region} ${value.webrtcGeo.city}`;
+            }
+            result += `\n\n🔵 HTTP 出口 IP: ${value.http || '-'}`;
+            if (value.httpGeo) {
+                result += `\n   位置：${value.httpGeo.country} ${value.httpGeo.region} ${value.httpGeo.city}`;
+            }
+        } else {
+            const ip = value.webrtc || value.http;
+            result = `✅ 一致\nIP: ${ip}`;
+            if (value.httpGeo) {
+                result += `\n位置：${value.httpGeo.country} ${value.httpGeo.region} ${value.httpGeo.city}`;
+            }
+        }
+        return result;
+    }
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (typeof value === 'string' && value.length > 100) return value.substring(0, 97) + '...';
     if (Array.isArray(value)) return '共 ' + value.length + ' 项 | ' + value.slice(0, 3).join(', ') + (value.length > 3 ? '...' : '');
@@ -445,7 +571,7 @@ function renderAdvancedAnalysis() {
             <ul style="margin-top: 10px; color: #666; line-height: 1.8;">
                 <li><strong>WebDriver 检测</strong> - navigator.webdriver 属性，为 true 则 100% 被识别</li>
                 <li><strong>无头浏览器检测</strong> - Headless Chrome 特征，直接封禁</li>
-                <li><strong>Selenium痕迹</strong> -__selenium、callSeleniumFunction 等对象</li>
+                <li><strong>Selenium 痕迹</strong> -__selenium、callSeleniumFunction 等对象</li>
                 <li><strong>Canvas 指纹</strong> - 最稳定的识别特征，难以伪造</li>
             </ul>
         </div>
@@ -456,6 +582,7 @@ function renderAdvancedAnalysis() {
                 <li><strong>字体列表</strong> - 安装的字体组合，较独特</li>
                 <li><strong>屏幕分辨率</strong> - 组合后的独特性中等</li>
                 <li><strong>时区与 IP</strong> - 不匹配时会被怀疑</li>
+                <li><strong>云服务 IP</strong> - AWS/Google Cloud 等云厂商 IP 段</li>
             </ul>
         </div>
         <div style="background: #c6f6d5; padding: 15px; border-radius: 8px;">

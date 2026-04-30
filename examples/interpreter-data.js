@@ -245,5 +245,69 @@ const INTERPRETATIONS = {
                 detection: '所有反爬虫系统必查'
             }
         }
+    },
+    network: {
+        name: '网络与 IP 信息',
+        icon: '🌐',
+        riskLevel: 'medium',
+        riskScore: 25,
+        metrics: {
+            ip: {
+                name: 'IP 地址（HTTP 出口）',
+                explanation: 'HTTP API 获取的出口 IP 地址（已隐藏后 8 位）',
+                deepDive: '这是你的 HTTP 请求出口 IP。如果使用了代理/VPN，这个 IP 是代理服务器的 IP。网站通常用这个 IP 判断你的地理位置。为保护隐私，这里隐藏了后 8 位。',
+                privacyImpact: '高 - 直接暴露地理位置',
+                detection: '所有网站都会获取'
+            },
+            ipWebrtc: {
+                name: 'IP 地址（WebRTC 真实）',
+                explanation: 'WebRTC 获取的真实网络接口 IP（已隐藏后 8 位）',
+                deepDive: 'WebRTC 可以直接获取你的网络接口 IP，不受代理/VPN 影响。如果这个 IP 与 HTTP API IP 不一致，说明你在使用代理。',
+                privacyImpact: '极高 - 暴露真实 IP',
+                detection: '高级检测 - 可以绕过代理检测'
+            },
+            ipDual: {
+                name: 'IP 一致性检测',
+                explanation: 'WebRTC IP vs HTTP API IP',
+                deepDive: 'WebRTC 获取的是真实网络接口 IP（不受代理影响），HTTP API 获取的是出口 IP（受代理影响）。如果两者不一致，说明你可能在使用代理、VPN 或梯子。这是强代理特征，也是反爬虫系统的重要检测点。',
+                privacyImpact: '关键 - 不一致会被识别为使用代理',
+                detection: '高级检测 - 反爬虫系统常用'
+            },
+            country: {
+                name: '国家/地区',
+                explanation: 'HTTP IP 所属国家',
+                deepDive: '基于 HTTP 出口 IP 的地理位置。如果使用代理，这里显示的是代理服务器所在国家。这个信息应该与你设置的语言、时区一致。',
+                privacyImpact: '中等 - 国家级位置',
+                detection: '基础检测'
+            },
+            region: {
+                name: '省份/州',
+                explanation: 'HTTP IP 所属省份或州',
+                deepDive: '比国家更精确的地理位置。可以用于判断城市级别的位置。',
+                privacyImpact: '中等 - 区域级位置',
+                detection: '中等'
+            },
+            city: {
+                name: '城市',
+                explanation: 'HTTP IP 所属城市',
+                deepDive: '最精确的 IP 地理位置（通常精确到区县级）。结合时区可以验证真实性。',
+                privacyImpact: '较高 - 城市级位置',
+                detection: '中等'
+            },
+            isp: {
+                name: 'ISP / 运营商',
+                explanation: '网络服务提供商',
+                deepDive: '显示你的宽带运营商（如电信、联通、移动）。如果 ISP 是云服务商（AWS、Google Cloud），会被高度怀疑是爬虫。',
+                privacyImpact: '中等 - 运营商信息',
+                detection: '中等 - 用于识别云 IP'
+            },
+            timezone: {
+                name: 'IP 时区',
+                explanation: 'HTTP IP 所在时区',
+                deepDive: '这个时区应该与浏览器的 Intl 时区一致。如果不匹配（如 IP 在美国但浏览器时区是亚洲/上海），说明可能在用代理或伪造时区。',
+                privacyImpact: '中等 - 时区一致性验证',
+                detection: '中等 - 常用于一致性检查'
+            }
+        }
     }
 };

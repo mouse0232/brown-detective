@@ -1,172 +1,252 @@
-# 2026-04-29 工作日志 - 指纹解读器完善
+# 2026-04-29 工作日志 - CreepJS 反爬虫指纹系统
 
-## 核心任务
-实现 CreepJS 指纹解读器的自动采集功能，并优化风险评级逻辑。
+## 今日完成
 
-## 完成内容
+### ✅ IP 信息采集功能完整实现
 
-### 1. 指纹解读器自动采集功能
+1. **IP 数据采集脚本**（`public/interpreter.html`）
+   - 使用 3 个 API：ip.sb, ipapi.co, ipwho.is
+   - 采集字段：ip, country, region, city, isp, timezone, latitude, longitude, as
+   - 多 API 备用，提高可靠性
+   - 5 秒超时限制
+   - 存储在 `window.IPInfo` 全局变量
 
-#### 文件创建
-- ✅ `public/interpreter.html` - 指纹深度解读器（自动采集版）
-- ✅ `public/interpreter-data.js` - 解读配置数据
-- ✅ `public/interpreter-logic.js` - 解读逻辑
-- ✅ `examples/` 目录同步以上文件
+2. **IP 解读配置**（`public/interpreter-data.js`）
+   - 新增 `network` 分类
+   - 配置 6 个指标：ip, country, region, city, isp, timezone
+   - 每个指标包含解释、深度解析、隐私影响、检测普遍性说明
 
-#### 关键实现
-- 页面加载后自动调用 `creep-full.js` 采集指纹
-- 轮询等待 `window.Creep` 和 `window.Fingerprint` 就绪（10 秒超时）
-- 采集完成后自动展示完整解读报告
-- 添加脚本加载版本号避免缓存（如 `?v=20260429-0201`）
+3. **IP 风险检测逻辑**（`public/interpreter-logic.js`）
+   - **云服务 IP 检测**：识别 AWS/Google Cloud/Microsoft Azure 等云服务商
+     - 云服务 IP → 中风险
+     - 提示用户："你的 IP 属于云服务商，这通常用于爬虫或自动化脚本"
+   - **时区一致性检测**：对比 IP 时区与浏览器时区
+     - 时区不匹配 → 中风险
+     - 提示用户："你的 IP 时区与浏览器时区不匹配，可能被识别为使用代理"
 
-#### 问题解决
-- **FP ID 显示 N/A** → 修改 creep-full.js 在 creepHash 计算后导出，包含 creepHash 字段
-- **analyzeData is not defined** → 修复脚本加载顺序，内联脚本移到外部 JS 之后
-- **creep-full.js ServiceWorker 错误** → 添加隐藏 DOM 容器（fingerprint-data 等）
+4. **显示优化**
+   - IP 地址隐藏后 8 位（`123.45.67.*`）保护隐私
+   - UTC 偏移转换成分数格式（`-480` → `UTC+8`）
+   - 动态风险等级根据实际检测结果调整
 
----
+### ✅ 动态风险评级优化
 
-### 2. creep-full.js 修改（仅 public 目录）
+1. **屏幕特征**
+   - 1920×1080 / 1366×768 / 2560×1440 → 低风险（常见分辨率）
+   - 全屏模式（可用尺寸≈总尺寸）→ 低风险
 
-#### 修改内容
-- 在采集完成后立即导出 `window.Creep` 和 `window.Fingerprint`
-- 导出对象包含 `creepHash` 字段（用于显示 FP ID）
-- 添加调试日志便于追踪执行流程
+2. **字体列表**
+   - <50 种 → 低风险（Windows 默认 10-20 种）
+   - 50-100 种 → 中风险
+   - >100 种 → 高风险
 
-#### 文件隔离
-- `docs/creep-full.js` - 官方原版（不修改）✅
-- `public/creep-full.js` - 修改版（用于解读器）
+3. **网络信息**
+   - 云服务 IP → 中风险
+   - 时区不匹配 → 中风险
+   - 其他 → 低风险
 
----
+### ✅ 文档更新
 
-### 3. 解读器逻辑修复
+1. **README.md**
+   - 更新指纹解读器说明
+   - 添加核心功能列表（IP 信息、动态评级、云 IP 检测等）
+   - 版本号：v20260429-0301
 
-#### 字段名适配
-- **字体列表**：从 `fonts.list` → `fonts.fontFaceLoadFonts`
-- **headless 检测**：检查 `headless.headless.hasHeadlessUA` 和 `webDriverIsOn`
+2. **MEMORY.md**
+   - 记录 IP 信息采集实现细节
+   - 记录网络风险检测逻辑
+   - 记录文件版本管理策略
 
-#### 风险评分修复
-- **系统特征**：字体>50 种才加 20 分（之前是任意字体就加分）
-- **formatValue 函数**：
-  - 处理 headless.headless 对象 → 显示"✅ 正常浏览器"或"⚠️ 检测到无头模式"
-  - UTC 偏移格式化：`-480` → `UTC+8`
+### ✅ 版本号管理
 
----
-
-### 4. 风险等级动态优化
-
-| 分类 | 原风险等级 | 新风险等级 | 判断逻辑 |
-|------|-----------|-----------|----------|
-| **无头浏览器检测** | 严重（固定） | 动态 | 检测到无头→严重，正常→低 |
-| **屏幕特征** | 高（固定） | 动态 | 1920×1080/1366×768→低，其他→中 |
-| **字体列表** | 中（固定） | 动态 | <50 种→低，50-100→中，>100→高 |
-| **时区信息** | 中 | 低 | 时区本身无害 |
-| **浏览器信息** | 中 | 低 | UA 不算高独特性 |
-
-#### 实现方式
-添加 `getDynamicRiskLevel()` 和 `getDynamicRiskText()` 函数，根据实际检测值动态调整。
+- `public/creep-full.js`: v20260429-0301
+- `public/interpreter-data.js`: v20260429-0301
+- `public/interpreter-logic.js`: v20260429-0301
+- `public/interpreter.html`: 引用上述版本
 
 ---
 
-### 5. 显示优化
+## 技术决策
 
-| 项目 | 优化前 | 优化后 |
-|------|--------|--------|
-| **FP ID** | N/A | 64 位哈希值（如 `a1b2c3d4...`） |
-| **UTC 偏移** | -480 | UTC+8 |
-| **时区描述** | 中国是 -480（UTC+8） | 中国是 UTC+8（北京时间） |
-| **User Agent** | 🔍 高独特性 | 📋 常见 |
-| **字体隐私影响** | 高 - 字体组合很独特 | 中等 - 字体数量正常，但组合仍有一定独特性 |
+### 1. 多 API 备用策略
+**问题**：单个 IP API 可能失败或不稳定
+**决策**：使用 ip.sb → ipapi.co → ipwho.is 依次尝试
+**优点**：
+- 提高采集成功率
+- 单个 API 失败不影响整体功能
+- 无需用户交互
+
+### 2. 风险分级原则
+**核心思想**：常见值应该显示低风险，只有异常值才标记风险
+**实现**：
+- 1920×1080 分辨率（20% 用户使用）→ 低风险
+- 13 种字体（Windows 默认）→ 低风险
+- 云服务 IP → 中风险（爬虫常用）
+- 时区不匹配 → 中风险（代理特征）
+
+### 3. IP 隐私保护
+**决策**：显示时隐藏后 8 位
+**实现**：在 `formatValue()`函数中对`ip` 键特殊处理
+**理由**：
+- 完整 IP 是敏感个人信息
+- 隐藏后 8 位仍能判断 ISP 和地区
+- 符合隐私保护最佳实践
 
 ---
 
-## 技术要点
+## 文件结构
 
-### 动态风险等级判断
-```javascript
-function getDynamicRiskLevel(categoryKey, data, defaultLevel) {
-    if (categoryKey === 'headless') {
-        const isHeadless = data?.headless?.hasHeadlessUA || 
-                          data?.headless?.webDriverIsOn ||
-                          data?.headlessRating > 50;
-        return isHeadless ? 'critical' : 'low';
-    }
-    if (categoryKey === 'fonts') {
-        const fontCount = (data?.fontFaceLoadFonts || []).length;
-        if (fontCount < 50) return 'low';
-        if (fontCount < 100) return 'medium';
-        return 'high';
-    }
-    // ... 其他分类
-    return defaultLevel;
-}
+```
+/workspace/
+├── public/
+│   ├── creep-full.js              # 修改版（添加 window.Creep 导出）
+│   ├── interpreter.html           # 指纹解读器（自动采集 + IP 采集）
+│   ├── interpreter-data.js        # 解读配置（含 network 分类）
+│   └── interpreter-logic.js       # 解读逻辑（含 IP 风险检测）
+├── examples/                      # 同步 public 示例文件
+│   ├── interpreter.html
+│   ├── interpreter-data.js
+│   └── interpreter-logic.js
+├── docs/                          # 官方原版（保持不变）
+│   ├── creep-full.js
+│   └── creep-lite.js
+├── README.md                      # 主文档（已更新）
+└── .monkeycode/
+    ├── MEMORY.md                  # 记忆文档（已更新）
+    └── 20260429-daily-summary.md  # 今日日志
 ```
 
-### 自动采集等待逻辑
-```javascript
-const waitForCreep = () => {
-    return new Promise((resolve) => {
-        const check = () => {
-            elapsed += checkInterval;
-            if (window.Creep && typeof window.Creep === 'object') {
-                resolve({...window.Creep, fingerprintId: window.Creep?.creepHash});
-            } else if (elapsed >= maxWaitTime) {
-                resolve({error: '采集超时'});
-            } else {
-                setTimeout(check, checkInterval);
-            }
-        };
-        check();
-    });
-};
-```
+---
+
+## 功能清单
+
+### 指纹解读器 v20260429-0301
+
+#### 自动采集（50+ 维度）
+- ✅ 浏览器信息（User Agent、平台、语言）
+- ✅ 屏幕特征（分辨率、色彩深度、像素比）
+- ✅ 硬件信息（CPU 核心数、内存、GPU）
+- ✅ 系统信息（时区、字体列表）
+- ✅ 指纹特征（Canvas、WebGL、Audio）
+- ✅ 自动化检测（WebDriver、无头浏览器、Selenium）
+- ✅ **网络信息（IP 地址、ISP、地理位置）** [NEW]
+
+#### 风险评级
+- ✅ 动态风险等级（根据实际检测结果）
+- ✅ 隐私暴露指数（0-100 分）
+- ✅ 风险构成分析（浏览器/硬件/系统/行为/自动化）
+- ✅ **云服务 IP 检测** [NEW]
+- ✅ **时区一致性检测** [NEW]
+
+#### 显示优化
+- ✅ FP ID：64 位哈希值
+- ✅ UTC 偏移：分数格式（UTC+8）
+- ✅ **IP 地址：隐藏后 8 位（123.45.67.*）** [NEW]
+- ✅ 常见值标记为低风险（如 1920×1080 分辨率）
+
+---
+
+## 待完成任务
+
+### 🔄 中等优先级
+- [ ] 测试 IP 采集在不同网络环境下的表现
+- [ ] 优化 IP API 超时处理（当前 5 秒）
+- [ ] 添加 IPv6 支持说明
+- [ ] PDF 访问控制逻辑
+- [ ] Token 签名验证
+
+### 📋 低优先级
+- [ ] IP 历史记录功能（对比多次访问的 IP 变化）
+- [ ] 添加更多云服务商识别规则
+- [ ] 优化网络风险评分权重
 
 ---
 
 ## 测试验证
 
-### 本地测试结果 ✅
-- FP ID 正常显示（64 位哈希）
-- 字体列表显示 13 种字体
-- 无头模式显示"✅ 正常浏览器"
-- 屏幕特征风险等级：低（1920×1080）
-- 时区信息显示 UTC+8
-- 浏览器信息风险等级：低
-- 字体列表风险等级：低（13 种字体）
-- 系统特征评分：0（字体<50）
+### 测试场景
+1. **正常家庭宽带**
+   - IP：家庭 ISP → 低风险
+   - 时区与浏览器一致 → 低风险
+   - 预期结果：网络风险 = 低
 
-### 最终版本号
-- `interpreter.html?v=20260429-0201`
+2. **云服务器**
+   - IP：AWS/Google Cloud → 中风险
+   - 提示："检测到云服务 IP"
+   - 预期结果：网络风险 = 中
 
----
+3. **代理/VPN**
+   - IP 时区：America/New_York
+   - 浏览器时区：Asia/Shanghai
+   - 提示："时区不一致"
+   - 预期结果：网络风险 = 中
 
-## 提交记录
-1. `feat: 指纹解读器自动采集功能 + creep-full.js 导出修复`
-2. `fix: 修复指纹 ID 显示 N/A 问题`
-3. `fix: 修正 fingerprintId 读取逻辑，优先读取 creepHash`
-4. `fix: 修复字体列表字段名从 list 到 fontFaceLoadFonts`
-5. `fix: 修复 headless 检测逻辑适配 creep-full.js 结构`
-6. `fix: 修复脚本加载顺序，内联脚本移到外部 JS 之后`
-7. `feat: 添加 JS 文件版本号避免缓存`
-8. `fix: 修复 interpreter-logic.js 语法错误`
-9. `fix: 修复无头模式显示 [object Object]`
-10. `fix: 修复系统特征评分逻辑，字体超过 50 种才标记风险`
-11. `feat: 降低字体列表风险等级从 high 到 medium`
-12. `feat: 无头浏览器检测根据实际结果动态显示风险等级`
-13. `feat: 屏幕特征根据分辨率常见程度动态显示风险等级`
-14. `feat: 优化 UTC 偏移显示格式（-480 → UTC+8）`
-15. `fix: 优化字体列表隐私影响描述`
-16. `fix: 优化时区描述格式`
-17. `fix: 降低时区信息风险等级从'中'到'低'`
-18. `fix: 降低浏览器信息风险等级，UA 不算高独特性`
-19. `feat: 字体列表根据实际字体数量动态显示风险等级`
-20. `docs: 恢复 docs/creep-full.js 为官方原版，修改版仅保留在 public 目录`
+### 验证步骤
+1. 访问 `http://localhost:8000/examples/interpreter.html`
+2. 等待自动采集完成（约 3-5 秒）
+3. 查看"网络与 IP 信息"分类
+4. 验证 IP 显示（隐藏后 8 位）
+5. 验证风险提示（如有）
 
 ---
 
-## 待优化项（如有后续需求）
-- [ ] PDF 访问控制逻辑
-- [ ] Token 签名验证
-- [ ] 内存泄漏修复（tempHashCache）
-- [ ] 错误日志记录
+## 技术难点与解决方案
 
+### 1. IP 采集可靠性
+**难点**：单一 API 可能失败
+**解决**：多 API 备用 + 超时控制
+```javascript
+const apis = ['https://api.ip.sb/geoip', 'https://ipapi.co/json/', 'https://ipwho.is/'];
+for (const api of apis) {
+  try {
+    const res = await fetch(api, { timeout: 5000 });
+    if (res.ok) { /* 使用第一个成功的 */ break; }
+  } catch (e) { continue; }
+}
+```
+
+### 2. 动态风险分级
+**难点**：如何判断什么是"常见值"
+**解决**：基于统计数据设定阈值
+- 1920×1080：约 20% 用户使用 → 低风险
+- Windows 默认字体 10-20 种 → <50 种都算低风险
+- 云服务 ISP 列表：硬编码常见云服务商
+
+### 3. IP 隐私保护
+**难点**：既要用 IP 信息又要保护隐私
+**解决**：显示时模糊处理
+```javascript
+if (key === 'ip' && typeof value === 'string') {
+  const parts = value.split('.');
+  if (parts.length === 4) {
+    parts[2] = '*';
+    parts[3] = '*';
+    return parts.join('.');
+  }
+}
+```
+
+---
+
+## 下一步计划
+
+1. **测试优化**（1-2 小时）
+   - 在不同网络环境下测试 IP 采集
+   - 验证云服务 IP 检测准确性
+   - 测试时区一致性判断逻辑
+
+2. **功能完善**（2-3 小时）
+   - 添加 IPv6 地址识别
+   - 优化 IP API 选择策略
+   - 添加 ISP 白名单/黑名单
+
+3. **文档补充**（1 小时）
+   - 更新测试示例
+   - 添加网络风险检测说明
+   - 编写部署指南
+
+---
+
+**记录时间**: 2026-04-29  
+**记录者**: AI Assistant  
+**版本**: v20260429-0301

@@ -208,6 +208,41 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, status: 'ok', timestamp: Date.now() })
 })
 
+// IP 地理信息查询（后端代理，绕过 CORS）
+app.get('/api/ip-geo', async (req, res) => {
+  try {
+    const ip = req.query.ip;
+    if (!ip) {
+      return res.status(400).json({ success: false, error: '缺少 IP 参数' });
+    }
+    
+    // 使用 ip-api.com（后端没有 CORS 限制）
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,isp,timezone,lat,lon,as,org`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      res.json({
+        success: true,
+        ip: ip,
+        country: data.country,
+        region: data.regionName,
+        city: data.city,
+        isp: data.isp,
+        org: data.org,
+        timezone: data.timezone,
+        latitude: data.lat,
+        longitude: data.lon,
+        as: data.as
+      });
+    } else {
+      res.status(500).json({ success: false, error: data.message || '查询失败' });
+    }
+  } catch (error) {
+    console.error('IP 地理信息查询失败:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 首页
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '/public/index.html'))

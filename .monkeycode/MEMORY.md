@@ -225,7 +225,7 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 
 ---
 
-**最后更新**: 2026-04-28  
+**最后更新**: 2026-04-29  
 **维护者**: Project Team
 
 ---
@@ -302,4 +302,57 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - 字体数量说明：Windows 默认约 10-20 种（不是 180 种）
 - 隐私影响描述：中等 - 字体数量正常，但组合仍有一定独特性（不是"很独特"）
 - 时区描述：中国是 UTC+8（北京时间）（不是"-480"）
+
+---
+
+## [2026-04-29] IP 信息采集与网络风险检测 - 新增功能
+
+### 项目知识摘要
+- Date: 2026-04-29
+- Context: Agent 在实现 IP 指纹集成时发现
+- Category: 代码模式
+
+#### 1. IP 信息采集方法
+- 使用多个 API 提高可靠性：ip.sb, ipapi.co, ipwho.is
+- 采集字段：ip, country, region, city, isp, timezone, latitude, longitude, as
+- 采集脚本放在 interpreter.html 的内联 script 中（页面加载时自动执行）
+- 采集结果存储在 `window.IPInfo` 全局变量
+
+#### 2. IP 地址显示隐私保护
+- 显示时隐藏后 8 位（最后两个字节）
+- 格式：`123.45.67.*`（不是显示完整 IP）
+- 实现：在 `formatValue()`函数中对`ip` 键特殊处理
+
+#### 3. 网络风险检测逻辑
+- **云服务 IP 检测**：
+  - 检测 ISP 是否为云服务商（Amazon, Google, Microsoft, Azure, AWS, DigitalOcean, Linode, Vultr, OVH）
+  - 云服务 IP → 中风险（常见于爬虫和自动化脚本）
+  - 提示用户："你的 IP 属于云服务商，这通常用于爬虫或自动化脚本。建议使用家庭宽带或移动网络。"
+  
+- **时区一致性检测**：
+  - 对比 IP 时区（`network.timezone`）与浏览器时区（`fingerprintData.timezone.timezone`）
+  - 时区不匹配 → 中风险
+  - 提示用户："你的 IP 时区与浏览器时区不匹配，可能被识别为使用代理。建议：关闭代理或调整浏览器时区。"
+
+#### 4. 网络分类配置
+- 在 `interpreter-data.js`中添加`network` 分类
+- 配置项：ip, country, region, city, isp, timezone
+- 基础风险等级：medium（中等）
+- 基础风险分数：25
+
+#### 5. 动态风险等级判断
+- 在 `getDynamicRiskLevel()`函数中添加`network` 分类处理
+- 根据 ISP 类型和时区一致性动态调整：
+  - 云服务 IP → medium
+  - 时区不匹配 → medium
+  - 其他 → low
+
+#### 6. 分类渲染集成
+- 在 `renderCategories()`函数中，network 分类使用 `window.IPInfo` 而非`fingerprintData.network`
+- 网络分类在 IP 采集完成后自动显示
+
+#### 7. API 可靠性处理
+- 多个 API 备用（第一个失败时尝试第二个）
+- 5 秒超时限制
+- 采集失败时不阻断主流程（仅网络分类不显示）
 

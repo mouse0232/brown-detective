@@ -2,8 +2,8 @@
   "fingerprints": {
     "5b93ab5f9a17dec838bb6e60b6636972fd8455a81cecea5401afba1fd0ff732f": {
       "firstSeen": 1777347050818,
-      "lastSeen": 1777347051182,
-      "visitCount": 2,
+      "lastSeen": 1777525675297,
+      "visitCount": 4,
       "fingerprint": {
         "navigator": {
           "platform": "Win32",
@@ -253,6 +253,12 @@
       "riskHistory": [
         {
           "timestamp": 1777347050818,
+          "riskScore": 0,
+          "level": "minimal",
+          "decision": "ALLOW"
+        },
+        {
+          "timestamp": 1777525631715,
           "riskScore": 0,
           "level": "minimal",
           "decision": "ALLOW"
