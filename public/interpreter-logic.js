@@ -140,6 +140,18 @@ function showResults() {
     renderCategories();
     renderAdvancedAnalysis();
     
+    // 注册 Turnstile 验证回调，验证成功后重新计算评分
+    window.onTurnstileVerified = function(result) {
+        calculatePrivacyScore();
+        renderCategories();
+    };
+    
+    // 如果 Turnstile 已经完成验证，立即重新计算一次
+    if (window.TurnstileResult?.success) {
+        calculatePrivacyScore();
+        renderCategories();
+    }
+    
     // 等待 IP 采集完成后再次渲染
     if (!window.IPInfoReady) {
         const waitForIP = setInterval(() => {
@@ -335,6 +347,13 @@ function calculatePrivacyScore() {
             tips.push({ icon: '🔀', title: 'IP 地址不一致（强代理特征）', desc: 'WebRTC 获取的真实 IP（' + window.IPInfoDual.webrtc + '）与 Cloudflare 看到的 IP（' + window.IPInfoDual.http + '）不一致，这是使用代理/VPN 的强特征。建议：关闭代理或使用支持 WebRTC 控制的代理。' });
         }
     }
+
+    // ========== 集成 Turnstile 人机验证 ==========
+    const turnstileResult = window.TurnstileResult;
+    if (turnstileResult && turnstileResult.success) {
+        detailScores.behavior = Math.max(0, detailScores.behavior - 5);
+    }
+
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
 
     document.getElementById('privacyScore').textContent = totalScore;
