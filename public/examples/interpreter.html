@@ -280,7 +280,40 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 🛡️ 安全监控面板 -->
+        <div class="results" id="securitySection" style="margin-top:20px;">
+            <div class="score-card">
+                <h3 style="color:#667eea;">🛡️ 安全监控</h3>
+                <div id="monitorStatus" style="margin-top:15px;">
+                    <div style="color:#666;font-size:14px;">🔄 检测中...</div>
+                </div>
+                <div id="proxyWarning" class="hidden" style="margin-top:15px;"></div>
+                <div style="margin-top:15px;padding:12px;background:#f8f9fa;border-radius:6px;">
+                    <div style="font-size:12px;color:#666;">
+                        <strong>检测项目：</strong><br>
+                        • 只读属性篡改<br>
+                        • API Hook<br>
+                        • 指纹浏览器特征（AdsPower/Multilogin 等）<br>
+                        • UA 逻辑矛盾<br>
+                        • Canvas/WebGL 异常<br>
+                        • 代理请求头检测
+                    </div>
+                </div>
+            </div>
+            <div class="score-card">
+                <h3 style="color:#667eea;">📋 检测说明</h3>
+                <div style="margin-top:15px;font-size:14px;color:#666;line-height:1.8;">
+                    <p>本页面使用 <strong>fp-monitor.js</strong> 进行持续安全监控，每 2 秒检测一次浏览器环境。</p>
+                    <p>如果检测到指纹浏览器（AdsPower、Multilogin 等）或 API 篡改行为，会在此显示警告。</p>
+                    <p style="margin-top:10px;"><strong>注意：</strong> 前端检测纯运行，代理检测通过 Cloudflare Functions 实现。</p>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <!-- fp-monitor.js - 反指纹浏览器监控 -->
+    <script src="/fp-monitor.js"></script>
     
     <!-- IP 信息采集脚本（Cloudflare Pages + WebRTC 对比检测） -->
     <script>
@@ -416,7 +449,42 @@
                 
                 window.IPInfoReady = true;
                 
-                // 6. 风险提示
+                // 6. 风险检测（代理头 + IP 风险）
+                try {
+                    const riskRes = await fetch('/api/risk-check');
+                    const riskData = await riskRes.json();
+                    window.IPInfo.risk = riskData;
+                    
+                    console.log('[Risk] 代理检测结果:', riskData);
+                    
+                    // 在页面上显示代理警告
+                    if (riskData.proxy_detected) {
+                        const proxyEl = document.getElementById('proxyWarning');
+                        if (proxyEl) {
+                            proxyEl.classList.remove('hidden');
+                            proxyEl.innerHTML = `
+                                <div style="padding:12px;background:#fff3cd;border-radius:8px;border-left:4px solid #ffc107;">
+                                    <div style="color:#856404;font-weight:600;margin-bottom:8px;font-size:14px;">
+                                        ⚠️ 检测到代理特征
+                                    </div>
+                                    <div style="font-size:13px;color:#856404;line-height:1.8;">
+                                        ${riskData.proxy_headers.map(h => `• ${h}`).join('<br>')}
+                                    </div>
+                                    <div style="margin-top:8px;font-size:12px;color:#856404;">
+                                        风险评分：<strong>${riskData.risk_score}</strong> | 
+                                        等级：<strong>${riskData.risk_level}</strong>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Risk] 检测失败:', e);
+                }
+                
+                console.log('[IP] 采集完成', window.IPInfo);
+                
+                // 7. 风险提示
                 if (mismatch) {
                     console.warn('[IP] ⚠️ 检测到 IP 不一致，可能在使用代理/VPN');
                     console.warn('[IP] WebRTC IP:', webrtcIP, webrtcGeo);
