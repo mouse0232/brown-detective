@@ -23,10 +23,6 @@ export async function onRequestPost(context) {
     // 从环境变量获取 Secret Key
     const secretKey = env.TURNSTILE_SECRET_KEY;
     
-    // 调试日志（部署后删除）
-    console.log('[Turnstile] Secret Key 是否存在:', !!secretKey);
-    console.log('[Turnstile] Secret Key 前缀:', secretKey ? secretKey.substring(0, 10) + '...' : 'N/A');
-    
     if (!secretKey) {
       console.error('[Turnstile] Secret Key 未配置');
       return Response.json({
