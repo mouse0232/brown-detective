@@ -1,4 +1,6 @@
-// 解读器逻辑
+// 解读器逻辑 v20260502-006
+console.log('[interpreter-logic] 脚本加载版本：v20260502-006');
+
 let fingerprintData = null;
 
 function showLoading(text = '正在分析指纹数据...') {
