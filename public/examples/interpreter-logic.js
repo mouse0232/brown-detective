@@ -118,6 +118,28 @@ function loadFromStorage() {
                 desc: `检测到：${issues}。可能是虚拟机或阉割的 WebGL 实现。` 
             });
         }
+        
+        // 检测到原型链异常
+        if (status?.prototype?.status === 'bad') {
+            detailScores.automation += 25; // 高风险：底层篡改
+            const issues = status.prototype.reasons.join(', ');
+            tips.push({ 
+                icon: '🔗', 
+                title: '原型链完整性受损', 
+                desc: `检测到：${issues}。说明浏览器内核被深度篡改。` 
+            });
+        }
+        
+        // 检测到 Canvas 噪声注入
+        if (status?.canvas?.status === 'bad') {
+            detailScores.hardware += 20;
+            const issues = status.canvas.reasons.join(', ');
+            tips.push({ 
+                icon: '🎨', 
+                title: 'Canvas 输出被篡改', 
+                desc: `检测到：${issues}。指纹浏览器常用的反检测手段。` 
+            });
+        }
     }
     
     // 检测 2: 代理请求头风险（从 Cloudflare Functions 获取）

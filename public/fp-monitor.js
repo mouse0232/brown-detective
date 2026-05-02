@@ -32,7 +32,9 @@
         apihook: { status: 'checking', reasons: [] },
         fingerprintBrowser: { status: 'checking', reasons: [] },
         ua: { status: 'checking', reasons: [] },
-        webgl: { status: 'checking', reasons: [] }
+        webgl: { status: 'checking', reasons: [] },
+        prototype: { status: 'checking', reasons: [] }, // 原型链完整性
+        canvas: { status: 'checking', reasons: [] } // Canvas 一致性
     };
     
     // ========== 核心检测函数 ==========
@@ -51,6 +53,121 @@
             return true;
         }
         return false;
+    };
+    
+    /**
+     * 检测原型链完整性
+     */
+    const checkPrototypeIntegrity = () => {
+        const reasons = [];
+        
+        try {
+            // 检测 1: 对象标签检查
+            const navTag = Object.prototype.toString.call(navigator);
+            if (navTag !== '[object Navigator]') {
+                reasons.push(`Navigator 标签异常 (${navTag})`);
+            }
+            
+            // 检测 2: 关键属性描述符
+            const criticalProps = [
+                [Navigator.prototype, 'userAgent', 'UA'],
+                [Navigator.prototype, 'platform', '平台'],
+                [Navigator.prototype, 'vendor', '厂商'],
+                [Screen.prototype, 'pixelDepth', '色深'],
+                [Navigator.prototype, 'hardwareConcurrency', 'CPU 核心数'],
+            ];
+            
+            for (const [proto, prop, name] of criticalProps) {
+                const desc = Object.getOwnPropertyDescriptor(proto, prop);
+                if (desc && desc.configurable === true) {
+                    reasons.push(`${name}属性描述符异常`);
+                }
+            }
+            
+            // 检测 3: 原型方法完整性
+            const requiredMethods = {
+                'Navigator': ['javaEnabled', 'sendBeacon'],
+                'HTMLCanvasElement': ['getContext', 'toDataURL'],
+            };
+            
+            for (const [protoName, methods] of Object.entries(requiredMethods)) {
+                const proto = window[protoName]?.prototype;
+                if (!proto) continue;
+                
+                for (const method of methods) {
+                    if (!(method in proto)) {
+                        reasons.push(`${protoName}.${method} 缺失`);
+                    }
+                }
+            }
+            
+        } catch (e) {
+            reasons.push('原型链检测异常');
+        }
+        
+        return reasons;
+    };
+    
+    /**
+     * Canvas 一致性检测（多次采样对比）
+     */
+    const checkCanvasConsistency = () => {
+        const reasons = [];
+        
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (!ctx) {
+                reasons.push('Canvas 上下文缺失');
+                canvas.remove();
+                return reasons;
+            }
+            
+            // 1x1 像素，减少性能开销
+            canvas.width = 1;
+            canvas.height = 1;
+            
+            // 连续绘制 5 次相同内容
+            const samples = [];
+            for (let i = 0; i < 5; i++) {
+                // 绘制固定内容
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(0, 0, 1, 1);
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(0, 0, 0.5, 0.5);
+                
+                // 获取像素数据
+                const imageData = ctx.getImageData(0, 0, 1, 1);
+                const hash = Array.from(imageData.data).join(',');
+                samples.push(hash);
+            }
+            
+            // 对比 5 次采样是否一致
+            const firstSample = samples[0];
+            const inconsistent = samples.some(s => s !== firstSample);
+            
+            if (inconsistent) {
+                reasons.push('Canvas 输出不稳定（噪声注入）');
+            }
+            
+            // 检测基础 Canvas 指纹是否被篡改
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, 1, 1);
+            const whitePixel = ctx.getImageData(0, 0, 1, 1).data;
+            
+            // 正常情况下应该是 [255, 255, 255, 255]
+            if (whitePixel[0] !== 255 || whitePixel[3] !== 255) {
+                reasons.push('Canvas 基础渲染异常');
+            }
+            
+            canvas.remove();
+            
+        } catch (e) {
+            reasons.push('Canvas 一致性检测异常');
+        }
+        
+        return reasons;
     };
     
     /**
@@ -143,7 +260,9 @@
             apihook: { status: 'ok', reasons: [] },
             fingerprintBrowser: { status: 'ok', reasons: [] },
             ua: { status: 'ok', reasons: [] },
-            webgl: { status: 'checking', reasons: [] } // 等待完整检测
+            webgl: { status: 'checking', reasons: [] },
+            prototype: { status: 'checking', reasons: [] },
+            canvas: { status: 'checking', reasons: [] }
         };
         
         // ========== 1. 只读属性巡检 ==========
@@ -175,7 +294,17 @@
             checkStatus.fingerprintBrowser.status = 'bad';
         }
         
-        // ========== 3. UA 与设备逻辑冲突 ==========
+        // ========== 3. 原型链完整性检测 ==========
+        const prototypeIssues = checkPrototypeIntegrity();
+        if (prototypeIssues.length > 0) {
+            reasons.push(...prototypeIssues);
+            checkStatus.prototype.reasons = prototypeIssues;
+            checkStatus.prototype.status = 'bad';
+        } else {
+            checkStatus.prototype.status = 'ok';
+        }
+        
+        // ========== 4. UA 与设备逻辑冲突 ==========
         const ua = navigator.userAgent.toLowerCase();
         const isMobileUA = /android|iphone|ipad|ipod/.test(ua);
         const isPcSize = screen.width >= 1200;
@@ -207,6 +336,16 @@
             checkStatus.ua.status = 'bad';
         }
         
+        // ========== 10. Canvas 一致性检测 ==========
+        const canvasIssues = checkCanvasConsistency();
+        if (canvasIssues.length > 0) {
+            reasons.push(...canvasIssues);
+            checkStatus.canvas.reasons = canvasIssues;
+            checkStatus.canvas.status = 'bad';
+        } else {
+            checkStatus.canvas.status = 'ok';
+        }
+        
         return reasons;
     }
     
@@ -224,7 +363,9 @@
             apihook: { status: 'ok', reasons: [] },
             fingerprintBrowser: { status: 'ok', reasons: [] },
             ua: { status: 'ok', reasons: [] },
-            webgl: { status: 'ok', reasons: [] }
+            webgl: { status: 'ok', reasons: [] },
+            prototype: { status: 'ok', reasons: [] },
+            canvas: { status: 'ok', reasons: [] }
         };
         
         // ========== 1. 只读属性巡检 ==========
@@ -452,6 +593,8 @@
         updateCheckItem('check-fingerprint-browser', checkStatus.fingerprintBrowser);
         updateCheckItem('check-ua', checkStatus.ua);
         updateCheckItem('check-webgl', checkStatus.webgl);
+        updateCheckItem('check-prototype', checkStatus.prototype);
+        updateCheckItem('check-canvas', checkStatus.canvas);
         
         if (CONFIG.DEBUG_MODE) {
             console.log('[FP Monitor]', reasons.length ? '异常：' + reasons.join(', ') : '正常');
