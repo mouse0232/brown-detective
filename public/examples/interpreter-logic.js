@@ -437,6 +437,34 @@ function calculatePrivacyScore() {
         }
     }
 
+    // ========== 集成 fp-monitor.js 检测结果 ==========
+    const fpMonitorResult = window.FpMonitor?.getLastResult();
+    if (fpMonitorResult?.isBad()) {
+        const status = window.FpMonitor?.getCheckStatus?.();
+        
+        if (status?.fingerprintBrowser?.status === 'bad') {
+            detailScores.automation += 35;
+        }
+        if (status?.apihook?.status === 'bad') {
+            detailScores.automation += 25;
+        }
+        if (status?.readonly?.status === 'bad') {
+            detailScores.automation += 20;
+        }
+        if (status?.ua?.status === 'bad') {
+            detailScores.behavior += 15;
+        }
+        if (status?.webgl?.status === 'bad') {
+            detailScores.hardware += 15;
+        }
+        if (status?.prototype?.status === 'bad') {
+            detailScores.automation += 25;
+        }
+        if (status?.canvas?.status === 'bad') {
+            detailScores.hardware += 20;
+        }
+    }
+
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
 
     document.getElementById('privacyScore').textContent = totalScore;
