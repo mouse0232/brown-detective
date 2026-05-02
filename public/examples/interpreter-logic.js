@@ -371,6 +371,9 @@ function getValueAtPath(obj, path) {
 }
 
 function calculatePrivacyScore() {
+    console.log('[评分计算] calculatePrivacyScore 被调用');
+    console.log('[评分计算] TurnstileResult:', window.TurnstileResult);
+    
     let totalScore = 0;
     let detailScores = { browser: 0, hardware: 0, system: 0, behavior: 0, automation: 0 };
     const tips = [];
