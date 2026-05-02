@@ -99,7 +99,7 @@
                         reject(error);
                     },
                     theme: 'auto',
-                    size: 'invisible', // 无形模式
+                    size: 'flexible', // 修复：使用 flexible 替代 invisible
                     tabindex: '0'
                 });
                 
