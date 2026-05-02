@@ -99,7 +99,6 @@
                         reject(error);
                     },
                     theme: 'auto',
-                    size: 'invisible', // 无形模式
                     tabindex: '0'
                 });
                 
