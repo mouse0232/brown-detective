@@ -465,6 +465,17 @@ function calculatePrivacyScore() {
         }
     }
 
+    // ========== 集成代理请求头检测 ==========
+    if (window.ProxyRiskScore && window.ProxyRiskScore > 0) {
+        if (window.ProxyRiskScore >= 50) {
+            detailScores.behavior += 30;
+        } else if (window.ProxyRiskScore >= 20) {
+            detailScores.behavior += 15;
+        } else {
+            detailScores.behavior += 5;
+        }
+    }
+
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
 
     document.getElementById('privacyScore').textContent = totalScore;
