@@ -159,6 +159,33 @@ function loadFromStorage() {
             detailScores.behavior += 5; // 低风险
         }
     }
+    
+    // 检测 3: Cloudflare Turnstile 人机验证
+    const turnstileResult = window.TurnstileResult;
+    if (turnstileResult && !turnstileResult.success) {
+        // Turnstile 验证失败 → 高风险
+        detailScores.automation += 40;
+        tips.push({ 
+            icon: '🤖', 
+            title: '人机验证失败', 
+            desc: 'Cloudflare Turnstile 检测到自动化行为或异常环境。' 
+        });
+    } else if (turnstileResult && turnstileResult.riskScore > 0) {
+        // Turnstile 返回风险评分
+        if (turnstileResult.riskScore >= 50) {
+            detailScores.behavior += 25;
+            tips.push({ 
+                icon: '⚠️', 
+                title: 'Turnstile 高风险', 
+                desc: `检测到风险特征：${turnstileResult.reasons?.join(', ') || '未知'}` 
+            });
+        } else if (turnstileResult.riskScore >= 20) {
+            detailScores.behavior += 10;
+        }
+    } else if (turnstileResult && turnstileResult.success) {
+        // Turnstile 验证通过，低风险
+        detailScores.behavior = Math.max(0, detailScores.behavior - 5); // 轻微降低风险
+    }
                 }
                 alert('未能从本地存储找到指纹数据');
                 hideLoading();

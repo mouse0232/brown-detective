@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>浏览器指纹深度解读器 - 专业版</title>
     <link rel="stylesheet" href="/style.min.css">
+    <!-- Cloudflare Turnstile 配置 -->
+    <!-- ⚠️ 请在 Cloudflare Dashboard 获取 Site Key 后替换下面的 YOUR_SITE_KEY -->
+    <meta name="turnstile-sitekey" content="YOUR_SITE_KEY">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -302,8 +305,14 @@
         </div>
     </div>
     
+    <!-- Cloudflare Turnstile 人机验证（隐藏容器） -->
+    <div id="turnstile-container" style="display:none;"></div>
+    
     <!-- fp-monitor.js - 反指纹浏览器监控 -->
     <script src="/fp-monitor.js?v=20260502"></script>
+    
+    <!-- Cloudflare Turnstile Widget -->
+    <script src="/turnstile-widget.js?v=20260502"></script>
     
     <!-- IP 信息采集脚本（Cloudflare Pages + WebRTC 对比检测） -->
     <script>
