@@ -12,8 +12,14 @@
     const CONFIG = {
         CHECK_INTERVAL: 5000,      // 检测间隔（毫秒）
         DISPLAY_ELEMENT: 'monitorStatus', // UI 元素 ID
-        DEBUG_MODE: false          // 调试模式（输出详细日志）
+        DEBUG_MODE: false,         // 调试模式（输出详细日志）
+        INITIAL_DELAY: 500,        // 首次检测延迟（DOM 渲染后）
+        FULL_CHECK_DELAY: 2000,    // 完整检测延迟（等 CreepJS 完成）
+        SHOW_LAST_CHECK: true      // 显示上次检测时间
     };
+    
+    // 记录上次检测时间
+    let lastCheckTime = null;
     
     // 内部状态
     let violationCount = 0;
@@ -124,11 +130,93 @@
     };
     
     /**
+     * 简化检测（只检测快速项）
+     */
+    function quickDetect() {
+        const reasons = [];
+        detectionCount++;
+        lastCheckTime = Date.now();
+        
+        // 重置各检测项状态
+        checkStatus = {
+            readonly: { status: 'ok', reasons: [] },
+            apihook: { status: 'ok', reasons: [] },
+            fingerprintBrowser: { status: 'ok', reasons: [] },
+            ua: { status: 'ok', reasons: [] },
+            webgl: { status: 'checking', reasons: [] } // 等待完整检测
+        };
+        
+        // ========== 1. 只读属性巡检 ==========
+        const readOnlyChecks = [
+            [navigator, 'platform', '平台'],
+            [navigator, 'vendor', '厂商'],
+            [navigator, 'language', '语言'],
+            [screen, 'pixelDepth', '色深'],
+            [navigator, 'hardwareConcurrency', 'CPU 核心数'],
+            [navigator, 'deviceMemory', '内存大小']
+        ];
+        
+        for (const [obj, key, name] of readOnlyChecks) {
+            if (checkReadOnly(obj, key)) {
+                reasons.push(`${name}属性可篡改`);
+                checkStatus.readonly.reasons.push(name);
+            }
+        }
+        
+        if (checkStatus.readonly.reasons.length > 0) {
+            checkStatus.readonly.status = 'bad';
+        }
+        
+        // ========== 2. 指纹浏览器特征检测 ==========
+        const detectedBrowsers = detectFingerprintBrowser();
+        if (detectedBrowsers.length > 0) {
+            reasons.push(`指纹浏览器：${detectedBrowsers.join(', ')}`);
+            checkStatus.fingerprintBrowser.reasons = detectedBrowsers;
+            checkStatus.fingerprintBrowser.status = 'bad';
+        }
+        
+        // ========== 3. UA 与设备逻辑冲突 ==========
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobileUA = /android|iphone|ipad|ipod/.test(ua);
+        const isPcSize = screen.width >= 1200;
+        
+        if (isMobileUA && isPcSize) {
+            reasons.push('移动端 UA + 电脑分辨率（矛盾）');
+            checkStatus.ua.reasons.push('移动端 UA+ 电脑分辨率');
+        }
+        
+        // Windows + Safari 矛盾
+        if (/windows/.test(ua) && /safari/i.test(ua) && !/chrome/i.test(ua)) {
+            reasons.push('Windows + Safari（矛盾）');
+            checkStatus.ua.reasons.push('Windows + Safari');
+        }
+        
+        // Headless 检测
+        if (/headless/i.test(ua)) {
+            reasons.push('Headless 浏览器特征');
+            checkStatus.ua.reasons.push('Headless');
+        }
+        
+        // Chrome UA 但没有 chrome 对象
+        if (/chrome/i.test(ua) && !window.chrome) {
+            reasons.push('Chrome UA 无 chrome 对象');
+            checkStatus.ua.reasons.push('Chrome UA 无 chrome');
+        }
+        
+        if (checkStatus.ua.reasons.length > 0) {
+            checkStatus.ua.status = 'bad';
+        }
+        
+        return reasons;
+    }
+    
+    /**
      * 完整检测流程
      */
     function fullDetect() {
         const reasons = [];
         detectionCount++;
+        lastCheckTime = Date.now();
         
         // 重置各检测项状态
         checkStatus = {
@@ -319,7 +407,14 @@
     
     function updateUI(reasons) {
         const el = document.getElementById(CONFIG.DISPLAY_ELEMENT);
-        if (!el) return; // 页面没有这个元素
+        if (!el) return;
+        
+        // 计算上次检测时间
+        let timeInfo = '';
+        if (lastCheckTime) {
+            const seconds = Math.floor((Date.now() - lastCheckTime) / 1000);
+            timeInfo = `<div style="font-size:11px;color:#666;margin-top:4px;">已监控 ${detectionCount} 次 • 上次检测：${seconds}秒前</div>`;
+        }
         
         // 更新总体状态
         if (reasons.length > 0) {
@@ -332,6 +427,7 @@
                         ${reasons.slice(0, 3).map(r => `• ${r}`).join('<br>')}
                         ${reasons.length > 3 ? `<br>• 还有${reasons.length - 3}项...` : ''}
                     </div>
+                    ${timeInfo}
                 </div>
             `;
             violationCount++;
@@ -342,8 +438,8 @@
                     <div style="color:#155724;font-weight:600;font-size:14px;">
                         ✅ 所有检测正常
                     </div>
-                    <div style="font-size:12px;color:#155724;margin-top:4px;">
-                        已持续监控 ${detectionCount} 次
+                    <div style="font-size:11px;color:#155724;margin-top:4px;">
+                        已持续监控 ${detectionCount} 次 ${lastCheckTime ? `• 上次检测：${Math.floor((Date.now() - lastCheckTime) / 1000)}秒前` : ''}
                     </div>
                 </div>
             `;
@@ -394,10 +490,22 @@
             console.log('[FP Monitor] 启动持续检测...');
         }
         
-        // 延迟启动，等 CreepJS 完成初始检测
+        // 阶段 1: 延迟 500ms 执行快速检测（DOM 渲染完成后）
         setTimeout(() => {
-            loopCheck();
-        }, 3000);
+            console.log('[FP Monitor] 执行快速检测...');
+            const quickResults = quickDetect();
+            updateUI(quickResults);
+            
+            // 阶段 2: 延迟 2 秒执行完整检测（等 CreepJS 完成采集）
+            setTimeout(() => {
+                console.log('[FP Monitor] 执行完整检测...');
+                const fullResults = fullDetect();
+                updateUI(fullResults);
+                
+                // 阶段 3: 开始定时循环检测（每 5 秒一次）
+                loopCheck();
+            }, CONFIG.FULL_CHECK_DELAY);
+        }, CONFIG.INITIAL_DELAY);
     }
     
     // ========== 暴露全局 API（调试用） ==========
