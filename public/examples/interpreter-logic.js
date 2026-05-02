@@ -244,15 +244,16 @@ function showResults() {
     renderCategories();
     renderAdvancedAnalysis();
     
-    // 注册 Turnstile 验证成功回调，重新计算评分
+    // 注册 Turnstile 验证回调
     window.onTurnstileVerified = function(result) {
         console.log('[Turnstile] 验证成功回调，重新计算评分:', result);
         calculatePrivacyScore();
         renderCategories();
     };
     
-    // 如果 Turnstile 已经完成验证，立即重新计算一次
-    if (window.TurnstileResult?.success) {
+    // 检查 Turnstile 是否已完成验证（可能比页面加载更早完成）
+    if (window.TurnstileResult) {
+        console.log('[Turnstile] 检测到已有验证结果，立即重新计算:', window.TurnstileResult);
         calculatePrivacyScore();
         renderCategories();
     }

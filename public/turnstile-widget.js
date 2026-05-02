@@ -78,6 +78,10 @@
                         
                         // 验证 token
                         verifyToken(token).then(result => {
+                            // 保存结果供后续使用
+                            window.TurnstileResult = result;
+                            
+                            // 调用回调（如果已注册）
                             if (window.onTurnstileVerified) {
                                 window.onTurnstileVerified(result);
                             }
