@@ -54,7 +54,111 @@ function loadFromStorage() {
                         fingerprintData = JSON.parse(data);
                         showResults();
                         return;
-                    }
+    }
+
+    // ========== 集成 fp-monitor.js 反指纹检测结果 ==========
+    // 方案 A：轻量集成，检测到异常时增加 automation 风险分
+    
+    // 检测 1: 指纹浏览器特征（高危）
+    const fpBrowserResult = window.FpMonitor?.getLastResult();
+    if (fpBrowserResult) {
+        const status = window.FpMonitor?.getCheckStatus?.();
+        
+        // 检测到指纹浏览器
+        if (status?.fingerprintBrowser?.status === 'bad') {
+            detailScores.automation += 35; // 高风险
+            const browsers = status.fingerprintBrowser.reasons.join(', ');
+            tips.push({ 
+                icon: '🚨', 
+                title: '检测到指纹浏览器', 
+                desc: `识别到：${browsers}。这是专业的反指纹工具，所有指纹都被刻意篡改过。` 
+            });
+        }
+        
+        // 检测到 API Hook
+        if (status?.apihook?.status === 'bad') {
+            detailScores.automation += 25;
+            const hooked = status.apihook.reasons.join(', ');
+            tips.push({ 
+                icon: '🔧', 
+                title: 'API 被 Hook/篡改', 
+                desc: `检测到：${hooked}。说明有脚本或扩展修改了浏览器 API。` 
+            });
+        }
+        
+        // 检测到只读属性篡改
+        if (status?.readonly?.status === 'bad') {
+            detailScores.automation += 20;
+            const tampered = status.readonly.reasons.join(', ');
+            tips.push({ 
+                icon: '⚠️', 
+                title: '只读属性被篡改', 
+                desc: `检测到：${tampered}。这些属性在正常浏览器中是不可修改的。` 
+            });
+        }
+        
+        // 检测到 UA 逻辑矛盾
+        if (status?.ua?.status === 'bad') {
+            detailScores.behavior += 15;
+            const conflicts = status.ua.reasons.join(', ');
+            tips.push({ 
+                icon: '🤔', 
+                title: 'UA 逻辑矛盾', 
+                desc: `检测到：${conflicts}。这通常是刻意伪装 UA 的结果。` 
+            });
+        }
+        
+        // 检测到 WebGL 异常
+        if (status?.webgl?.status === 'bad') {
+            detailScores.hardware += 15;
+            const issues = status.webgl.reasons.join(', ');
+            tips.push({ 
+                icon: '🎮', 
+                title: 'WebGL 异常', 
+                desc: `检测到：${issues}。可能是虚拟机或阉割的 WebGL 实现。` 
+            });
+        }
+        
+        // 检测到原型链异常
+        if (status?.prototype?.status === 'bad') {
+            detailScores.automation += 25; // 高风险：底层篡改
+            const issues = status.prototype.reasons.join(', ');
+            tips.push({ 
+                icon: '🔗', 
+                title: '原型链完整性受损', 
+                desc: `检测到：${issues}。说明浏览器内核被深度篡改。` 
+            });
+        }
+        
+        // 检测到 Canvas 噪声注入
+        if (status?.canvas?.status === 'bad') {
+            detailScores.hardware += 20;
+            const issues = status.canvas.reasons.join(', ');
+            tips.push({ 
+                icon: '🎨', 
+                title: 'Canvas 输出被篡改', 
+                desc: `检测到：${issues}。指纹浏览器常用的反检测手段。` 
+            });
+        }
+    }
+    
+    // 检测 2: 代理请求头风险（从 Cloudflare Functions 获取）
+    if (window.ProxyRiskScore && window.ProxyRiskScore > 0) {
+        // 根据风险评分递增加分
+        if (window.ProxyRiskScore >= 50) {
+            detailScores.behavior += 30; // 高风险：多层代理
+            tips.push({ 
+                icon: '🔀', 
+                title: '高风险代理特征', 
+                desc: '检测到多层代理或代理服务器头，这是爬虫/自动化的典型特征。' 
+            });
+        } else if (window.ProxyRiskScore >= 20) {
+            detailScores.behavior += 15; // 中等风险：单层代理
+            tips.push({ icon: '⚠️', title: '检测到代理', desc: '通过请求头分析，你可能在使用代理服务。' });
+        } else {
+            detailScores.behavior += 5; // 低风险
+        }
+    }
                 }
                 alert('未能从本地存储找到指纹数据');
                 hideLoading();
