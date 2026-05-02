@@ -17,8 +17,17 @@
     
     // 内部状态
     let violationCount = 0;
-    let lastResult = { reasons: [], isBad: false };
+    let lastResult = { reasons: [], isBad: false, details: {} };
     let detectionCount = 0;
+    
+    // 各检测项状态（用于 UI 显示）
+    let checkStatus = {
+        readonly: { status: 'checking', reasons: [] },
+        apihook: { status: 'checking', reasons: [] },
+        fingerprintBrowser: { status: 'checking', reasons: [] },
+        ua: { status: 'checking', reasons: [] },
+        webgl: { status: 'checking', reasons: [] }
+    };
     
     // ========== 核心检测函数 ==========
     
@@ -121,6 +130,15 @@
         const reasons = [];
         detectionCount++;
         
+        // 重置各检测项状态
+        checkStatus = {
+            readonly: { status: 'ok', reasons: [] },
+            apihook: { status: 'ok', reasons: [] },
+            fingerprintBrowser: { status: 'ok', reasons: [] },
+            ua: { status: 'ok', reasons: [] },
+            webgl: { status: 'ok', reasons: [] }
+        };
+        
         // ========== 1. 只读属性巡检 ==========
         const readOnlyChecks = [
             [navigator, 'platform', '平台'],
@@ -134,7 +152,12 @@
         for (const [obj, key, name] of readOnlyChecks) {
             if (checkReadOnly(obj, key)) {
                 reasons.push(`${name}属性可篡改`);
+                checkStatus.readonly.reasons.push(name);
             }
+        }
+        
+        if (checkStatus.readonly.reasons.length > 0) {
+            checkStatus.readonly.status = 'bad';
         }
         
         // ========== 2. 关键 API Hook 检测 ==========
@@ -149,7 +172,12 @@
         for (const [proto, key, name] of apiChecks) {
             if (proto && proto[key] && isHookedFn(proto[key])) {
                 reasons.push(`${name}API 被 Hook`);
+                checkStatus.apihook.reasons.push(name);
             }
+        }
+        
+        if (checkStatus.apihook.reasons.length > 0) {
+            checkStatus.apihook.status = 'bad';
         }
         
         // ========== 3. Canvas 运行时校验 ==========
@@ -165,11 +193,13 @@
                 
                 if (pixel[3] === 0) {
                     reasons.push('Canvas 渲染被拦截');
+                    checkStatus.apihook.reasons.push('Canvas 渲染');
                 }
                 
                 // 检测 API 是否被劫持
                 if (isHookedFn(ctx.fillText) || isHookedFn(ctx.arc)) {
                     reasons.push('Canvas API 被劫持');
+                    checkStatus.apihook.reasons.push('Canvas API');
                 }
             }
             
@@ -186,11 +216,13 @@
             
             if (!gl) {
                 reasons.push('WebGL 环境缺失');
+                checkStatus.webgl.reasons.push('环境缺失');
             } else {
                 // 检测扩展列表（指纹浏览器常阉割扩展）
                 const extensions = gl.getSupportedExtensions();
                 if (!extensions || extensions.length < 10) {
                     reasons.push(`WebGL 扩展阉割（仅${extensions.length}个）`);
+                    checkStatus.webgl.reasons.push(`扩展阉割`);
                 }
                 
                 // 检测虚拟 GPU
@@ -200,6 +232,7 @@
                         const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
                         if (/swiftshader|virtualbox|vmware|qemu|parallels/i.test(renderer)) {
                             reasons.push(`虚拟 GPU: ${renderer}`);
+                            checkStatus.webgl.reasons.push(`虚拟 GPU`);
                         }
                     }
                 } catch (e) {
@@ -217,6 +250,11 @@
             canvas.remove();
         } catch (e) {
             reasons.push('WebGL 检测异常');
+            checkStatus.webgl.reasons.push('检测异常');
+        }
+        
+        if (checkStatus.webgl.reasons.length > 0) {
+            checkStatus.webgl.status = 'bad';
         }
         
         // ========== 5. AudioContext 检测 ==========
@@ -241,27 +279,37 @@
         
         if (isMobileUA && isPcSize) {
             reasons.push('移动端 UA + 电脑分辨率（矛盾）');
+            checkStatus.ua.reasons.push('移动端 UA+ 电脑分辨率');
         }
         
         // Windows + Safari 矛盾
         if (/windows/.test(ua) && /safari/i.test(ua) && !/chrome/i.test(ua)) {
             reasons.push('Windows + Safari（矛盾）');
+            checkStatus.ua.reasons.push('Windows + Safari');
         }
         
         // ========== 8. Headless 检测 ==========
         if (/headless/i.test(ua)) {
             reasons.push('Headless 浏览器特征');
+            checkStatus.ua.reasons.push('Headless');
         }
         
         // Chrome UA 但没有 chrome 对象
         if (/chrome/i.test(ua) && !window.chrome) {
             reasons.push('Chrome UA 无 chrome 对象');
+            checkStatus.ua.reasons.push('Chrome UA 无 chrome');
+        }
+        
+        if (checkStatus.ua.reasons.length > 0) {
+            checkStatus.ua.status = 'bad';
         }
         
         // ========== 9. 指纹浏览器特征检测 ==========
         const detectedBrowsers = detectFingerprintBrowser();
         if (detectedBrowsers.length > 0) {
             reasons.push(`指纹浏览器：${detectedBrowsers.join(', ')}`);
+            checkStatus.fingerprintBrowser.reasons = detectedBrowsers;
+            checkStatus.fingerprintBrowser.status = 'bad';
         }
         
         return reasons;
@@ -273,38 +321,58 @@
         const el = document.getElementById(CONFIG.DISPLAY_ELEMENT);
         if (!el) return; // 页面没有这个元素
         
+        // 更新总体状态
         if (reasons.length > 0) {
             el.innerHTML = `
-                <div style="padding:15px;background:#fff3cd;border-radius:8px;border-left:4px solid #ffc107;">
-                    <div style="color:#856404;font-weight:600;margin-bottom:8px;font-size:15px;">
+                <div style="padding:12px;background:#fff3cd;border-radius:8px;border-left:4px solid #ffc107;">
+                    <div style="color:#856404;font-weight:600;margin-bottom:6px;font-size:14px;">
                         ⚠️ 检测到 ${reasons.length} 项异常
                     </div>
-                    <div style="font-size:13px;color:#856404;line-height:1.8;">
-                        ${reasons.map(r => `• ${r}`).join('<br>')}
-                    </div>
-                    <div style="margin-top:10px;font-size:12px;color:#856404;">
-                        违规次数：${violationCount + 1}
+                    <div style="font-size:12px;color:#856404;line-height:1.6;">
+                        ${reasons.slice(0, 3).map(r => `• ${r}`).join('<br>')}
+                        ${reasons.length > 3 ? `<br>• 还有${reasons.length - 3}项...` : ''}
                     </div>
                 </div>
             `;
             violationCount++;
-            lastResult = { reasons, isBad: true };
+            lastResult = { reasons, isBad: true, details: checkStatus };
         } else {
             el.innerHTML = `
-                <div style="padding:15px;background:#d4edda;border-radius:8px;border-left:4px solid #28a745;">
-                    <div style="color:#155724;font-weight:600;font-size:15px;">
-                        ✅ 浏览器环境正常
+                <div style="padding:12px;background:#d4edda;border-radius:8px;border-left:4px solid #28a745;">
+                    <div style="color:#155724;font-weight:600;font-size:14px;">
+                        ✅ 所有检测正常
                     </div>
-                    <div style="font-size:12px;color:#155724;margin-top:5px;">
+                    <div style="font-size:12px;color:#155724;margin-top:4px;">
                         已持续监控 ${detectionCount} 次
                     </div>
                 </div>
             `;
-            lastResult = { reasons: [], isBad: false };
+            lastResult = { reasons: [], isBad: false, details: checkStatus };
         }
+        
+        // 更新各检测项状态显示
+        updateCheckItem('check-readonly', checkStatus.readonly);
+        updateCheckItem('check-apihook', checkStatus.apihook);
+        updateCheckItem('check-fingerprint-browser', checkStatus.fingerprintBrowser);
+        updateCheckItem('check-ua', checkStatus.ua);
+        updateCheckItem('check-webgl', checkStatus.webgl);
         
         if (CONFIG.DEBUG_MODE) {
             console.log('[FP Monitor]', reasons.length ? '异常：' + reasons.join(', ') : '正常');
+        }
+    }
+    
+    // 更新单个检测项显示
+    function updateCheckItem(elementId, status) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        
+        if (status.status === 'ok') {
+            el.innerHTML = '<span style="color:#28a745;">✅ 正常</span>';
+        } else if (status.status === 'bad') {
+            el.innerHTML = `<span style="color:#dc3545;">❌ 异常</span> <span style="color:#666;font-size:11px;">(${status.reasons.join(', ')})</span>`;
+        } else {
+            el.innerHTML = '<span style="color:#666;">🔄 检测中</span>';
         }
     }
     
@@ -340,7 +408,8 @@
         getDetectionCount: () => detectionCount,
         detectNow: fullDetect,
         getLastResult: () => lastResult,
-        getConfig: () => CONFIG
+        getConfig: () => CONFIG,
+        getCheckStatus: () => checkStatus // 获取各检测项状态
     };
     
     window.__fpMonitor = monitorAPI;

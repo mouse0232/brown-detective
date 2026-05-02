@@ -217,6 +217,24 @@
                         <div class="breakdown-item"><span class="breakdown-label">稳定性</span><span class="breakdown-value" id="stabilityScore">-</span></div>
                         <div class="breakdown-item"><span class="breakdown-label">采集耗时</span><span class="breakdown-value" id="collectionTime">-</span></div>
                     </div>
+                    <!-- 🛡️ 安全监控面板（移到隐私指数下方） -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">🛡️ 安全监控</h4>
+                        <div id="monitorStatus" style="margin-bottom: 15px;">
+                            <div style="color:#666;font-size:14px;">🔄 检测中...</div>
+                        </div>
+                        <div id="proxyWarning" class="hidden" style="margin-bottom: 15px;"></div>
+                        <div style="padding:12px;background:#f8f9fa;border-radius:6px;">
+                            <div style="font-size:12px;color:#666;line-height:2;">
+                                <div><strong>• 只读属性：</strong><span id="check-readonly" style="margin-left:6px;">🔄 检测中</span></div>
+                                <div><strong>• API Hook：</strong><span id="check-apihook" style="margin-left:6px;">🔄 检测中</span></div>
+                                <div><strong>• 指纹浏览器：</strong><span id="check-fingerprint-browser" style="margin-left:6px;">🔄 检测中</span></div>
+                                <div><strong>• UA 逻辑：</strong><span id="check-ua" style="margin-left:6px;">🔄 检测中</span></div>
+                                <div><strong>• WebGL：</strong><span id="check-webgl" style="margin-left:6px;">🔄 检测中</span></div>
+                                <div><strong>• 代理头：</strong><span id="check-proxy" style="margin-left:6px;">🔄 检测中</span></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="main-content">
                     <div class="fp-id-card">
@@ -280,40 +298,7 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 🛡️ 安全监控面板 -->
-        <div class="results" id="securitySection" style="margin-top:20px;">
-            <div class="score-card">
-                <h3 style="color:#667eea;">🛡️ 安全监控</h3>
-                <div id="monitorStatus" style="margin-top:15px;">
-                    <div style="color:#666;font-size:14px;">🔄 检测中...</div>
-                </div>
-                <div id="proxyWarning" class="hidden" style="margin-top:15px;"></div>
-                <div style="margin-top:15px;padding:12px;background:#f8f9fa;border-radius:6px;">
-                    <div style="font-size:12px;color:#666;">
-                        <strong>检测项目：</strong><br>
-                        • 只读属性篡改（每 5 秒检测）<br>
-                        • API Hook（Canvas/WebGL/Audio）<br>
-                        • 指纹浏览器特征（AdsPower/Multilogin 等）<br>
-                        • UA 逻辑矛盾<br>
-                        • 虚拟 GPU/窗口沙箱<br>
-                        • 代理请求头检测（Cloudflare）
-                    </div>
-                </div>
-            </div>
-            <div class="score-card">
-                <h3 style="color:#667eea;">📋 检测说明</h3>
-                <div style="margin-top:15px;font-size:14px;color:#666;line-height:1.8;">
-                    <p>本页面使用 <strong>fp-monitor.js</strong> 进行持续安全监控，每 2 秒检测一次浏览器环境。</p>
-                    <p>如果检测到指纹浏览器（AdsPower、Multilogin 等）或 API 篡改行为，会在此显示警告。</p>
-                    <p style="margin-top:10px;"><strong>注意：</strong> 前端检测纯运行，代理检测通过 Cloudflare Functions 实现。</p>
-                </div>
-            </div>
-        </div>
     </div>
-    
-    <!-- fp-monitor.js - 反指纹浏览器监控 -->
-    <script src="/fp-monitor.js"></script>
     
     <!-- IP 信息采集脚本（Cloudflare Pages + WebRTC 对比检测） -->
     <script>
@@ -457,6 +442,16 @@
                     
                     console.log('[Risk] 代理检测结果:', riskData);
                     
+                    // 更新 UI 检测项状态
+                    const proxyCheckEl = document.getElementById('check-proxy');
+                    if (proxyCheckEl) {
+                        if (riskData.proxy_detected) {
+                            proxyCheckEl.innerHTML = `<span style="color:#dc3545;">❌ 异常</span> <span style="color:#666;font-size:11px;">(${riskData.proxy_headers.join(', ')})</span>`;
+                        } else {
+                            proxyCheckEl.innerHTML = '<span style="color:#28a745;">✅ 正常</span>';
+                        }
+                    }
+                    
                     // 在页面上显示代理警告
                     if (riskData.proxy_detected) {
                         const proxyEl = document.getElementById('proxyWarning');
@@ -478,8 +473,17 @@
                             `;
                         }
                     }
+                    
+                    // 传递风险评分到安全评分计算
+                    window.ProxyRiskScore = riskData.risk_score;
+                    
                 } catch (e) {
                     console.error('[Risk] 检测失败:', e);
+                    // 检测失败也标记为异常
+                    const proxyCheckEl = document.getElementById('check-proxy');
+                    if (proxyCheckEl) {
+                        proxyCheckEl.innerHTML = '<span style="color:#6c757d;">⚠️ 检测失败</span>';
+                    }
                 }
                 
                 console.log('[IP] 采集完成', window.IPInfo);
