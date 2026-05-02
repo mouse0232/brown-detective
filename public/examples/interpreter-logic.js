@@ -429,24 +429,38 @@ function calculatePrivacyScore() {
         
         if (status?.fingerprintBrowser?.status === 'bad') {
             detailScores.automation += 35;
+            const browsers = status.fingerprintBrowser.reasons.join(', ');
+            tips.push({ icon: '🚨', title: '检测到指纹浏览器', desc: `识别到：${browsers}。` });
         }
         if (status?.apihook?.status === 'bad') {
             detailScores.automation += 25;
+            const hooked = status.apihook.reasons.join(', ');
+            tips.push({ icon: '🔧', title: 'API 被 Hook/篡改', desc: `检测到：${hooked}。` });
         }
         if (status?.readonly?.status === 'bad') {
             detailScores.automation += 20;
+            const tampered = status.readonly.reasons.join(', ');
+            tips.push({ icon: '⚠️', title: '只读属性被篡改', desc: `检测到：${tampered}。` });
         }
         if (status?.ua?.status === 'bad') {
             detailScores.behavior += 15;
+            const conflicts = status.ua.reasons.join(', ');
+            tips.push({ icon: '🤔', title: 'UA 逻辑矛盾', desc: `检测到：${conflicts}。` });
         }
         if (status?.webgl?.status === 'bad') {
             detailScores.hardware += 15;
+            const issues = status.webgl.reasons.join(', ');
+            tips.push({ icon: '🎮', title: 'WebGL 异常', desc: `检测到：${issues}。` });
         }
         if (status?.prototype?.status === 'bad') {
             detailScores.automation += 25;
+            const issues = status.prototype.reasons.join(', ');
+            tips.push({ icon: '🔗', title: '原型链完整性受损', desc: `检测到：${issues}。` });
         }
         if (status?.canvas?.status === 'bad') {
             detailScores.hardware += 20;
+            const issues = status.canvas.reasons.join(', ');
+            tips.push({ icon: '🎨', title: 'Canvas 输出被篡改', desc: `检测到：${issues}。` });
         }
     }
 
@@ -454,11 +468,29 @@ function calculatePrivacyScore() {
     if (window.ProxyRiskScore && window.ProxyRiskScore > 0) {
         if (window.ProxyRiskScore >= 50) {
             detailScores.behavior += 30;
+            tips.push({ icon: '🔀', title: '高风险代理特征', desc: '检测到多层代理或代理服务器头。' });
         } else if (window.ProxyRiskScore >= 20) {
             detailScores.behavior += 15;
+            tips.push({ icon: '⚠️', title: '检测到代理', desc: '通过请求头分析，你可能在使用代理服务。' });
         } else {
             detailScores.behavior += 5;
         }
+    }
+
+    // ========== 集成 Turnstile 人机验证 ==========
+    const turnstileResult = window.TurnstileResult;
+    if (turnstileResult && !turnstileResult.success) {
+        detailScores.automation += 40;
+        tips.push({ icon: '🤖', title: '人机验证失败', desc: 'Cloudflare Turnstile 检测到自动化行为或异常环境。' });
+    } else if (turnstileResult && turnstileResult.riskScore > 0) {
+        if (turnstileResult.riskScore >= 50) {
+            detailScores.behavior += 25;
+            tips.push({ icon: '⚠️', title: 'Turnstile 高风险', desc: `检测到风险特征。` });
+        } else if (turnstileResult.riskScore >= 20) {
+            detailScores.behavior += 10;
+        }
+    } else if (turnstileResult && turnstileResult.success) {
+        detailScores.behavior = Math.max(0, detailScores.behavior - 5);
     }
 
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
