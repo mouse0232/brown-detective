@@ -254,8 +254,11 @@ function showResults() {
     // 检查 Turnstile 是否已完成验证（可能比页面加载更早完成）
     if (window.TurnstileResult) {
         console.log('[Turnstile] 检测到已有验证结果，立即重新计算:', window.TurnstileResult);
-        calculatePrivacyScore();
-        renderCategories();
+        // 延迟一点确保 IP 检测完成
+        setTimeout(() => {
+            calculatePrivacyScore();
+            renderCategories();
+        }, 500);
     }
     
     // 等待 IP 采集完成后再次渲染
@@ -493,6 +496,12 @@ function calculatePrivacyScore() {
 
     // ========== 集成 Turnstile 人机验证 ==========
     const turnstileResult = window.TurnstileResult;
+    console.log('[Turnstile] 评分计算前的状态:', { 
+        hasResult: !!turnstileResult, 
+        success: turnstileResult?.success, 
+        riskScore: turnstileResult?.riskScore,
+        behaviorBefore: detailScores.behavior 
+    });
     if (turnstileResult && !turnstileResult.success) {
         detailScores.automation += 40;
         tips.push({ icon: '🤖', title: '人机验证失败', desc: 'Cloudflare Turnstile 检测到自动化行为或异常环境。' });
@@ -505,6 +514,7 @@ function calculatePrivacyScore() {
         }
     } else if (turnstileResult && turnstileResult.success) {
         detailScores.behavior = Math.max(0, detailScores.behavior - 5);
+        console.log('[Turnstile] 验证通过，behavior 减免 5 分:', detailScores.behavior);
     }
 
     totalScore = Math.min(100, Object.values(detailScores).reduce((a, b) => a + b, 0));
