@@ -10,7 +10,7 @@
     
     // ========== 配置 ==========
     const CONFIG = {
-        CHECK_INTERVAL: 2000,      // 检测间隔（毫秒）
+        CHECK_INTERVAL: 5000,      // 检测间隔（毫秒）
         DISPLAY_ELEMENT: 'monitorStatus', // UI 元素 ID
         DEBUG_MODE: false          // 调试模式（输出详细日志）
     };
@@ -172,6 +172,9 @@
                     reasons.push('Canvas API 被劫持');
                 }
             }
+            
+            // 清理 canvas
+            canvas.remove();
         } catch (e) {
             reasons.push('Canvas 环境异常');
         }
@@ -179,7 +182,7 @@
         // ========== 4. WebGL 环境检测 ==========
         try {
             const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const gl = canvas.getContext('webgl', { powerPreference: 'low-power' }) || canvas.getContext('experimental-webgl', { powerPreference: 'low-power' });
             
             if (!gl) {
                 reasons.push('WebGL 环境缺失');
@@ -202,7 +205,16 @@
                 } catch (e) {
                     // 忽略扩展检测错误
                 }
+                
+                // 清理 WebGL 上下文
+                const loseContext = gl.getExtension('WEBGL_lose_context');
+                if (loseContext) {
+                    loseContext.loseContext();
+                }
             }
+            
+            // 清理 canvas
+            canvas.remove();
         } catch (e) {
             reasons.push('WebGL 检测异常');
         }
