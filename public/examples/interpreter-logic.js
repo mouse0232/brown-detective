@@ -244,6 +244,19 @@ function showResults() {
     renderCategories();
     renderAdvancedAnalysis();
     
+    // 注册 Turnstile 验证成功回调，重新计算评分
+    window.onTurnstileVerified = function(result) {
+        console.log('[Turnstile] 验证成功回调，重新计算评分:', result);
+        calculatePrivacyScore();
+        renderCategories();
+    };
+    
+    // 如果 Turnstile 已经完成验证，立即重新计算一次
+    if (window.TurnstileResult?.success) {
+        calculatePrivacyScore();
+        renderCategories();
+    }
+    
     // 等待 IP 采集完成后再次渲染
     if (!window.IPInfoReady) {
         const waitForIP = setInterval(() => {
