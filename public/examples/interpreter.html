@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>浏览器指纹深度解读器 - 专业版</title>
-    <link rel="stylesheet" href="../style.min.css">
+    <link rel="stylesheet" href="/style.min.css">
     <!-- Cloudflare Turnstile 配置 -->
     <meta name="turnstile-sitekey" content="0x4AAAAAADHQhnhFQNalGnoM">
     <style>
@@ -308,10 +308,10 @@
     <div id="turnstile-container" style="display:none;"></div>
     
     <!-- fp-monitor.js - 反指纹浏览器监控 -->
-    <script src="fp-monitor.js?v=20260502"></script>
+    <script src="/fp-monitor.js?v=20260502"></script>
     
     <!-- Cloudflare Turnstile Widget -->
-    <script src="turnstile-widget.js?v=20260502"></script>
+    <script src="/examples/turnstile-widget.js?v=20260502"></script>
     
     <!-- IP 信息采集脚本（Cloudflare Pages + WebRTC 对比检测） -->
     <script>
@@ -520,7 +520,7 @@
         })();
     </script>
 
-    <script src="../creep-full.js?v=20260430-002"></script>
+    <script src="/creep-full.js?v=20260430-002"></script>
     <!-- creep-full.js 需要的隐藏容器 -->
     <div id="fingerprint-data" style="display:none !important;"></div>
     <div id="creep-fingerprint" style="display:none !important;"></div>
@@ -528,8 +528,8 @@
     <div id="status-info" style="display:none !important;"></div>
     <div id="webrtc-connection" style="display:none !important;"></div>
     
-    <script src="interpreter-data.js?v=20260430-002"></script>
-    <script src="interpreter-logic.js?v=20260430-002"></script>
+    <script src="/examples/interpreter-data.js?v=20260430-002"></script>
+    <script src="/examples/interpreter-logic.js?v=20260430-002"></script>
 <script>
         // 页面加载后自动采集并解读
         window.addEventListener('DOMContentLoaded', async () => {
