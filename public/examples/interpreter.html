@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>浏览器指纹深度解读器 - 专业版</title>
     <link rel="stylesheet" href="/style.min.css">
+    
+    <!-- Cloudflare Turnstile 配置 -->
+    <meta name="turnstile-sitekey" content="0x4AAAAAADHQhnhFQNalGnoM">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -302,10 +306,14 @@
         </div>
     </div>
     
-    <!-- fp-monitor.js - 反指纹浏览器监控 -->
+    <!-- Cloudflare Turnstile 人机验证（隐藏容器） -->
+    <div id="turnstile-container" style="display:none;"></div>
+    
     <script src="/fp-monitor.js?v=20260502"></script>
     
-    <!-- IP 信息采集脚本（Cloudflare Pages + WebRTC 对比检测） -->
+    <!-- Cloudflare Turnstile Widget -->
+    <script src="/turnstile-widget.js?v=20260502"></script>
+    
     <script>
         // Pages Functions + WebRTC 双 IP 对比检测代理
         window.IPInfo = null;
