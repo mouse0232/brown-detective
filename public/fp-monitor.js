@@ -307,6 +307,9 @@
     // ========== 启动 ==========
     
     function start() {
+        console.log('[FP Monitor] 🛡️ 反指纹浏览器检测已启动');
+        console.log('[FP Monitor] 在控制台输入 FpMonitor 访问 API');
+        
         if (CONFIG.DEBUG_MODE) {
             console.log('[FP Monitor] 启动持续检测...');
         }
@@ -319,7 +322,7 @@
     
     // ========== 暴露全局 API（调试用） ==========
     
-    window.__fpMonitor = {
+    const monitorAPI = {
         isBad: () => lastResult.isBad,
         getViolationCount: () => violationCount,
         getDetectionCount: () => detectionCount,
@@ -327,6 +330,9 @@
         getLastResult: () => lastResult,
         getConfig: () => CONFIG
     };
+    
+    window.__fpMonitor = monitorAPI;
+    window.FpMonitor = monitorAPI;
     
     // ========== 自动启动 ==========
     
