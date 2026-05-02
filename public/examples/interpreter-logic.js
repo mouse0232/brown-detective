@@ -421,21 +421,6 @@ function calculatePrivacyScore() {
             tips.push({ icon: '🔀', title: 'IP 地址不一致（强代理特征）', desc: 'WebRTC 获取的真实 IP（' + window.IPInfoDual.webrtc + '）与 Cloudflare 看到的 IP（' + window.IPInfoDual.http + '）不一致，这是使用代理/VPN 的强特征。建议：关闭代理或使用支持 WebRTC 控制的代理。' });
         }
     }
-        
-        // 检测时区一致性
-        const ipTimezone = network.timezone || '';
-        const browserTimezone = fingerprintData?.timezone?.timezone || '';
-        if (ipTimezone && browserTimezone && !ipTimezone.toLowerCase().includes(browserTimezone.split('/')[0].toLowerCase())) {
-            detailScores.behavior += 15;
-            tips.push({ icon: '🕐', title: '时区不一致', desc: '你的 IP 时区（' + ipTimezone + '）与浏览器时区（' + browserTimezone + '）不匹配，可能被识别为使用代理。建议：关闭代理或调整浏览器时区。' });
-        }
-        
-        // 检测 IP 不一致（WebRTC vs HTTP）
-        if (network.mismatch) {
-            detailScores.behavior += 25;
-            tips.push({ icon: '🔀', title: 'IP 地址不一致', desc: 'WebRTC IP（' + network.webrtcIP + '）与 HTTP API IP（' + network.httpIP + '）不一致，说明你可能在使用代理、VPN 或梯子。这是强代理特征。' });
-        }
-    }
 
     // ========== 集成 fp-monitor.js 检测结果 ==========
     const fpMonitorResult = window.FpMonitor?.getLastResult();
