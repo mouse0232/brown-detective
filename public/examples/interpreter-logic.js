@@ -118,28 +118,6 @@ function loadFromStorage() {
                 desc: `检测到：${issues}。可能是虚拟机或阉割的 WebGL 实现。` 
             });
         }
-        
-        // 检测到原型链异常
-        if (status?.prototype?.status === 'bad') {
-            detailScores.automation += 25; // 高风险：底层篡改
-            const issues = status.prototype.reasons.join(', ');
-            tips.push({ 
-                icon: '🔗', 
-                title: '原型链完整性受损', 
-                desc: `检测到：${issues}。说明浏览器内核被深度篡改。` 
-            });
-        }
-        
-        // 检测到 Canvas 噪声注入
-        if (status?.canvas?.status === 'bad') {
-            detailScores.hardware += 20;
-            const issues = status.canvas.reasons.join(', ');
-            tips.push({ 
-                icon: '🎨', 
-                title: 'Canvas 输出被篡改', 
-                desc: `检测到：${issues}。指纹浏览器常用的反检测手段。` 
-            });
-        }
     }
     
     // 检测 2: 代理请求头风险（从 Cloudflare Functions 获取）
@@ -158,33 +136,6 @@ function loadFromStorage() {
         } else {
             detailScores.behavior += 5; // 低风险
         }
-    }
-    
-    // 检测 3: Cloudflare Turnstile 人机验证
-    const turnstileResult = window.TurnstileResult;
-    if (turnstileResult && !turnstileResult.success) {
-        // Turnstile 验证失败 → 高风险
-        detailScores.automation += 40;
-        tips.push({ 
-            icon: '🤖', 
-            title: '人机验证失败', 
-            desc: 'Cloudflare Turnstile 检测到自动化行为或异常环境。' 
-        });
-    } else if (turnstileResult && turnstileResult.riskScore > 0) {
-        // Turnstile 返回风险评分
-        if (turnstileResult.riskScore >= 50) {
-            detailScores.behavior += 25;
-            tips.push({ 
-                icon: '⚠️', 
-                title: 'Turnstile 高风险', 
-                desc: `检测到风险特征：${turnstileResult.reasons?.join(', ') || '未知'}` 
-            });
-        } else if (turnstileResult.riskScore >= 20) {
-            detailScores.behavior += 10;
-        }
-    } else if (turnstileResult && turnstileResult.success) {
-        // Turnstile 验证通过，低风险
-        detailScores.behavior = Math.max(0, detailScores.behavior - 5); // 轻微降低风险
     }
                 }
                 alert('未能从本地存储找到指纹数据');
