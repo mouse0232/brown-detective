@@ -480,8 +480,22 @@ function calculatePrivacyScore() {
     if (tips.length === 0) {
         tips.push({ icon: '✅', title: '探长认证', desc: '未检测到明显风险。这是真实浏览器！' });
         tips.push({ icon: '💡', title: '继续保持', desc: '你的浏览器特征很自然，不需要特别调整。' });
+        
+        // 显示成功诊断
+        if (typeof window.showDetectiveVerdict === 'function') {
+            window.showDetectiveVerdict(true);
+        }
     } else {
         tips.push({ icon: '🛡️', title: '探长的建议', desc: '使用 CanvasBlocker、Chameleon、Trace 等扩展可以干扰指纹采集。' });
+        
+        // 显示失败诊断
+        if (typeof window.showDetectiveVerdict === 'function') {
+            const fpBrowserResult = window.FpMonitor?.getLastResult();
+            const detectedBrowsers = fpBrowserResult?.details?.fingerprintBrowser?.reasons || [];
+            const allReasons = tips.map(t => `${t.icon} ${t.title}: ${t.desc}`);
+            
+            window.showDetectiveVerdict(false, detectedBrowsers, allReasons.slice(0, 5));
+        }
     }
 
     const tipsHtml = tips.map(tip => `

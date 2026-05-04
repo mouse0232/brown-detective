@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>布朗探长 - 假浏览器检测仪</title>
     <link rel="stylesheet" href="/style.min.css">
+    <link rel="stylesheet" href="/detective-loading.css">
+    <link rel="icon" type="image/svg+xml" href="/detective-brown.svg">
     
     <!-- Cloudflare Turnstile 配置 -->
     <meta name="turnstile-sitekey" content="0x4AAAAAADHQhnhFQNalGnoM">
@@ -17,6 +19,149 @@
             color: #E0E0E0;
             min-height: 100vh;
             padding: 20px;
+        }
+        
+        /* 检测结果对话框 */
+        .detective-verdict {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
+            border: 2px solid #00ffff;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            animation: verdict-appear 0.5s ease-out;
+        }
+        
+        @keyframes verdict-appear {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .verdict-success {
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+        }
+        
+        .verdict-fail {
+            border-color: #ff00ff;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+            animation: verdict-shake 0.5s ease-in-out;
+        }
+        
+        @keyframes verdict-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .verdict-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .verdict-avatar {
+            width: 60px;
+            height: 60px;
+            flex-shrink: 0;
+        }
+        
+        .verdict-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .verdict-success .verdict-title {
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .verdict-fail .verdict-title {
+            color: #ff00ff;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+        
+        .verdict-message {
+            color: #E0E0E0;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .verdict-reasons {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .verdict-reasons h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .verdict-reasons ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .verdict-reasons li {
+            color: #A0A0A0;
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .verdict-reasons li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #ff00ff;
+        }
+        
+        .verdict-success .verdict-reasons li::before {
+            color: #00ff00;
+        }
+        
+        /* 庆祝动画 */
+        .celebration-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #00ffff;
+            border-radius: 50%;
+            animation: particle-fall 3s linear forwards;
+        }
+        
+        @keyframes particle-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
         }
         .container { max-width: 1400px; margin: 0 auto; }
         .header {
@@ -247,11 +392,35 @@
         </div>
 
         <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <div id="loadingText">🔍 探长正在搜集线索...</div>
+            <div class="detective-loading">
+                <img src="/detective-brown.svg" alt="布朗探长" class="detective-avatar">
+                <div class="search-clues">
+                    <div class="clue-item"></div>
+                    <div class="clue-item"></div>
+                    <div class="clue-item"></div>
+                </div>
+                <div class="loading-text" id="loadingText">
+                    🔍 探长正在搜集线索<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+                </div>
+            </div>
         </div>
 
         <div id="results" class="hidden">
+            <!-- 探长的诊断报告 -->
+            <div id="detectiveVerdict" class="detective-verdict hidden">
+                <div class="verdict-header">
+                    <img src="/detective-brown.svg" alt="布朗探长" class="verdict-avatar">
+                    <div class="verdict-title" id="verdictTitle">🎯 探长认证</div>
+                </div>
+                <div class="verdict-message" id="verdictMessage">
+                    让我看看你的真面目...
+                </div>
+                <div class="verdict-reasons hidden" id="verdictReasons">
+                    <h4>🔍 我的推理：</h4>
+                    <ul id="reasonsList"></ul>
+                </div>
+            </div>
+            
             <div class="results">
                 <div class="score-card">
                     <div class="score-header">
@@ -583,7 +752,7 @@
     <div id="webrtc-connection" style="display:none !important;"></div>
     
     <script src="/interpreter-data.js?v=20260430-002"></script>
-    <script src="/interpreter-logic.js?v=20260502-011"></script>
+    <script src="/interpreter-logic.js?v=20260502-012"></script>
 <script>
         // 页面加载后自动采集并解读
         window.addEventListener('DOMContentLoaded', async () => {
@@ -691,6 +860,72 @@
                 `;
             }
         });
+    </script>
+    
+    <!-- 庆祝动画容器 -->
+    <div class="celebration-particles" id="celebrationParticles"></div>
+    
+    <script>
+        // 显示探长诊断报告
+        function showDetectiveVerdict(isSuccess, detectedBrowsers = [], reasons = []) {
+            const verdictEl = document.getElementById('detectiveVerdict');
+            const titleEl = document.getElementById('verdictTitle');
+            const messageEl = document.getElementById('verdictMessage');
+            const reasonsEl = document.getElementById('verdictReasons');
+            const reasonsList = document.getElementById('reasonsList');
+            
+            verdictEl.classList.remove('hidden', 'verdict-success', 'verdict-fail');
+            
+            if (isSuccess) {
+                // 成功认证
+                verdictEl.classList.add('verdict-success');
+                titleEl.textContent = '✅ 探长认证：真实浏览器';
+                messageEl.innerHTML = '😌 嗯...这个浏览器看起来很自然，没有什么可疑的地方。<br>继续保持，你是个真实的用户！';
+                reasonsEl.classList.add('hidden');
+                
+                // 触发庆祝动画
+                triggerCelebration();
+            } else {
+                // 识破伪装
+                verdictEl.classList.add('verdict-fail');
+                titleEl.textContent = '❌ 探长识破：这是假浏览器！';
+                
+                if (detectedBrowsers.length > 0) {
+                    messageEl.innerHTML = `😲 等等...我认出来了，这是 <strong style="color:#ff00ff">${detectedBrowsers.join(', ')}</strong>！<br>别想骗过我的眼睛！`;
+                } else {
+                    messageEl.innerHTML = `😠 这个浏览器很可疑...有多处疑点！<br>让我看看你的真面目！`;
+                }
+                
+                // 显示推理过程
+                if (reasons.length > 0) {
+                    reasonsEl.classList.remove('hidden');
+                    reasonsList.innerHTML = reasons.map(r => `<li>${r}</li>`).join('');
+                }
+            }
+        }
+        
+        // 触发布尔庆祝动画
+        function triggerCelebration() {
+            const container = document.getElementById('celebrationParticles');
+            container.style.display = 'block';
+            container.innerHTML = '';
+            
+            // 创建粒子
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 2 + 's';
+                particle.style.background = Math.random() > 0.5 ? '#00ffff' : '#ffd700';
+                container.appendChild(particle);
+            }
+            
+            // 3 秒后移除
+            setTimeout(() => {
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }, 3000);
+        }
     </script>
     
     <!-- 页脚 -->
