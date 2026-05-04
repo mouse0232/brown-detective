@@ -192,6 +192,9 @@ function updateMonitorStatus() {
         return;
     }
     
+    // 调用代理检测 API
+    checkProxyRisk();
+    
     // 统计检测结果
     const checks = [
         { id: 'check-readonly', name: '只读属性', status: checkStatus.readonly },
@@ -201,7 +204,7 @@ function updateMonitorStatus() {
         { id: 'check-webgl', name: 'WebGL', status: checkStatus.webgl },
         { id: 'check-prototype', name: '原型链', status: checkStatus.prototype },
         { id: 'check-canvas', name: 'Canvas 一致性', status: checkStatus.canvas },
-        { id: 'check-proxy', name: '代理头', status: window.ProxyRiskScore ? (window.ProxyRiskScore > 0 ? { status: 'bad', reasons: [`风险分：${window.ProxyRiskScore}`] } : { status: 'ok', reasons: [] }) : { status: 'checking', reasons: [] } },
+        { id: 'check-proxy', name: '代理头', status: window.ProxyRiskScore !== undefined ? (window.ProxyRiskScore > 0 ? { status: 'bad', reasons: [`风险分：${window.ProxyRiskScore}`] } : { status: 'ok', reasons: [] }) : { status: 'checking', reasons: [] } },
     ];
     
     // 更新每个检测项的状态
@@ -225,6 +228,40 @@ function updateMonitorStatus() {
         monitorStatus.innerHTML = `<div style="color:#dc3545;font-size:14px;">⚠️ 检测到 ${badChecks.length} 项异常</div>`;
     } else {
         monitorStatus.innerHTML = '<div style="color:#28a745;font-size:14px;">✅ 所有检测通过</div>';
+    }
+}
+
+/**
+ * 调用后端代理风险检测 API
+ */
+async function checkProxyRisk() {
+    if (window.ProxyRiskScore !== undefined) return; // 避免重复调用
+    
+    try {
+        const res = await fetch('/api/risk-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await res.json();
+        window.ProxyRiskScore = result.riskScore || 0;
+        
+        // 更新检测结果
+        const checkEl = document.getElementById('check-proxy');
+        if (checkEl) {
+            if (window.ProxyRiskScore > 0) {
+                checkEl.innerHTML = `❌ 异常 <span style="color:#999;font-size:12px;">(风险分：${window.ProxyRiskScore})</span>`;
+            } else {
+                checkEl.innerHTML = '✅ 正常';
+            }
+        }
+        
+        // 更新监控总状态
+        updateMonitorStatus();
+        
+    } catch (e) {
+        console.error('[Proxy] 检测失败:', e);
+        window.ProxyRiskScore = 0;
     }
 }
 
