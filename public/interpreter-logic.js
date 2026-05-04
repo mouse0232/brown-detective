@@ -144,6 +144,7 @@ function showResults() {
     window.onTurnstileVerified = function(result) {
         calculatePrivacyScore();
         renderCategories();
+        updateMonitorStatus();
     };
     
     // 如果 Turnstile 已经完成验证，立即重新计算一次
@@ -151,6 +152,9 @@ function showResults() {
         calculatePrivacyScore();
         renderCategories();
     }
+    
+    // 更新 fp-monitor 安全监控面板
+    updateMonitorStatus();
     
     // 等待 IP 采集完成后再次渲染
     if (!window.IPInfoReady) {
@@ -167,6 +171,61 @@ function getRiskClass(score) {
     if (score >= 40) return 'high';
     if (score >= 20) return 'medium';
     return 'low';
+}
+
+function getRiskText(level) {
+    const map = { 'low': '低', 'medium': '中', 'high': '高', 'critical': '严重' };
+    return map[level] || level;
+}
+
+/**
+ * 更新 fp-monitor 安全监控面板状态
+ */
+function updateMonitorStatus() {
+    const monitorStatus = document.getElementById('monitorStatus');
+    if (!monitorStatus) return;
+    
+    // 检查 fp-monitor 是否可用
+    const checkStatus = window.FpMonitor?.getCheckStatus?.();
+    if (!checkStatus) {
+        monitorStatus.innerHTML = '<div style="color:#999;font-size:14px;">⚠️ fp-monitor 未加载</div>';
+        return;
+    }
+    
+    // 统计检测结果
+    const checks = [
+        { id: 'check-readonly', name: '只读属性', status: checkStatus.readonly },
+        { id: 'check-apihook', name: 'API Hook', status: checkStatus.apihook },
+        { id: 'check-fingerprint-browser', name: '指纹浏览器', status: checkStatus.fingerprintBrowser },
+        { id: 'check-ua', name: 'UA 逻辑', status: checkStatus.ua },
+        { id: 'check-webgl', name: 'WebGL', status: checkStatus.webgl },
+        { id: 'check-prototype', name: '原型链', status: checkStatus.prototype },
+        { id: 'check-canvas', name: 'Canvas 一致性', status: checkStatus.canvas },
+        { id: 'check-proxy', name: '代理头', status: window.ProxyRiskScore ? (window.ProxyRiskScore > 0 ? { status: 'bad', reasons: [`风险分：${window.ProxyRiskScore}`] } : { status: 'ok', reasons: [] }) : { status: 'checking', reasons: [] } },
+    ];
+    
+    // 更新每个检测项的状态
+    for (const check of checks) {
+        const el = document.getElementById(check.id);
+        if (!el) continue;
+        
+        if (check.status.status === 'ok') {
+            el.innerHTML = '✅ 正常';
+        } else if (check.status.status === 'bad') {
+            const reasons = check.status.reasons.join('、');
+            el.innerHTML = `❌ 异常 <span style="color:#999;font-size:12px;">(${reasons}${typeof reasons === 'string' && reasons.length > 30 ? '...' : ''})</span>`;
+        } else {
+            el.innerHTML = '🔄 检测中';
+        }
+    }
+    
+    // 汇总状态
+    const badChecks = checks.filter(c => c.status.status === 'bad');
+    if (badChecks.length > 0) {
+        monitorStatus.innerHTML = `<div style="color:#dc3545;font-size:14px;">⚠️ 检测到 ${badChecks.length} 项异常</div>`;
+    } else {
+        monitorStatus.innerHTML = '<div style="color:#28a745;font-size:14px;">✅ 所有检测通过</div>';
+    }
 }
 
 function getRiskText(level) {
