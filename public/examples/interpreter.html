@@ -298,56 +298,56 @@
                 </div>
                 <div class="main-content">
                     <div class="fp-id-card">
-                        <h3>🆔 你的数字指纹</h3>
+                        <h3>📋 案件编号</h3>
                         <div class="fp-id-display" id="fpIdDisplay">-</div>
                         <div class="fp-id-stats">
-                            <div class="stat-box"><div class="stat-value" id="fpVersion">-</div><div class="stat-label">版本</div></div>
-                            <div class="stat-box"><div class="stat-value" id="fpTimestamp">-</div><div class="stat-label">采集时间</div></div>
-                            <div class="stat-box"><div class="stat-value" id="fpDuration">-</div><div class="stat-label">采集耗时</div></div>
+                            <div class="stat-box"><div class="stat-value" id="fpVersion">-</div><div class="stat-label">采集方式</div></div>
+                            <div class="stat-box"><div class="stat-value" id="fpTimestamp">-</div><div class="stat-label">案发时间</div></div>
+                            <div class="stat-box"><div class="stat-value" id="fpDuration">-</div><div class="stat-label">检测用时</div></div>
                         </div>
-                        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-                            <strong>💡 你知道吗？</strong>
-                            <p style="margin-top: 8px; color: #666; font-size: 14px; line-height: 1.6;">
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(255, 215, 0, 0.1); border-radius: 8px; border-left: 4px solid #FFD700;">
+                            <strong style="color: #FFD700;">💡 探长笔记</strong>
+                            <p style="margin-top: 8px; color: #A0A0A0; font-size: 14px; line-height: 1.6;">
                                 这个 FP ID 是基于你的浏览器特征计算出的 SHA-256 哈希值。即使清除 Cookie、使用隐身模式，只要浏览器配置不变，这个 ID 就保持不变。网站可以用它来长期追踪你的浏览行为。
                             </p>
                         </div>
                     </div>
                     <div class="tips-section" id="tipsSection">
-                        <h3>🛡️ 隐私保护建议</h3>
+                        <h3 style="color: #00FFFF;">🛡️ 探长的建议</h3>
                         <div class="tips-grid" id="tipsGrid"></div>
                     </div>
                     <div class="chart-container">
-                        <div class="chart-title">📊 各维度风险评分</div>
+                        <div class="chart-title" style="color: #00FFFF;">📊 各维度伪装指数</div>
                         <div class="bar-chart" id="riskChart"></div>
                     </div>
                 </div>
             </div>
             <div id="categoriesContainer"></div>
-            <div class="advanced-analysis">
-                <h3 style="margin-bottom: 20px; color: #667eea;">🔍 高级分析</h3>
+            <div class="advanced-analysis" style="background: #1A1A1A; border: 1px solid #2D2D2D;">
+                <h3 style="margin-bottom: 20px; color: #00FFFF;">🔍 高级分析</h3>
                 <div class="analysis-tabs">
-                    <button class="tab-btn active" onclick="switchTab('fingerprint')">指纹分析</button>
-                    <button class="tab-btn" onclick="switchTab('detection')">检测机制</button>
-                    <button class="tab-btn" onclick="switchTab('comparison')">对比模式</button>
-                    <button class="tab-btn" onclick="switchTab('technical')">技术细节</button>
+                    <button class="tab-btn active" onclick="switchTab('fingerprint')">📋 指纹分析</button>
+                    <button class="tab-btn" onclick="switchTab('detection')">🔍 检测机制</button>
+                    <button class="tab-btn" onclick="switchTab('comparison')">🔀 对比模式</button>
+                    <button class="tab-btn" onclick="switchTab('technical')">⚙️ 技术细节</button>
                 </div>
                 <div class="tab-content active" id="tab-fingerprint"><div class="timeline" id="fingerprintAnalysis"></div></div>
                 <div class="tab-content" id="tab-detection"><div id="detectionPoints"></div></div>
                 <div class="tab-content" id="tab-comparison">
                     <div class="comparison-mode">
-                        <h4 style="margin-bottom: 15px;">指纹对比</h4>
-                        <p style="color: #666; line-height: 1.8; margin-bottom: 20px;">粘贴另一个指纹 JSON，对比两次采集的差异，了解哪些特征发生了变化。</p>
-                        <textarea id="compareInput" placeholder="粘贴第二个指纹 JSON 进行对比..." style="width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; min-height: 100px; font-family: 'Courier New', monospace; font-size: 13px; margin-bottom: 15px;"></textarea>
+                        <h4 style="margin-bottom: 15px; color: #00FFFF;">🔀 案件对比</h4>
+                        <p style="color: #A0A0A0; line-height: 1.8; margin-bottom: 20px;">粘贴另一个指纹 JSON，对比两次采集的差异，了解哪些特征发生了变化。</p>
+                        <textarea id="compareInput" placeholder="粘贴第二个指纹 JSON 进行对比..." style="width: 100%; padding: 15px; border: 1px solid #2D2D2D; border-radius: 8px; min-height: 100px; font-family: 'Courier New', monospace; font-size: 13px; margin-bottom: 15px; background: #0D0D0D; color: #E0E0E0;"></textarea>
                         <button onclick="compareFingerprints()" class="secondary">🔍 开始对比</button>
                         <div class="comparison-grid" id="comparisonResult" style="display: none;"></div>
                     </div>
                 </div>
                 <div class="tab-content" id="tab-technical">
-                    <div style="background: #1a202c; color: #e2e8f0; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto;">
+                    <div style="background: #0D0D0D; color: #E0E0E0; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; border: 1px solid #2D2D2D;">
                         <pre id="technicalDetails">-</pre>
                     </div>
-                    <div style="margin-top: 20px; padding: 15px; background: #ebf8ff; border-radius: 8px; border-left: 4px solid #4299e1;">
-                        <strong>📖 相关技术：</strong>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(0, 255, 255, 0.1); border-radius: 8px; border-left: 4px solid #00FFFF;">
+                        <strong style="color: #00FFFF;">📖 相关技术：</strong>
                         <ul style="margin-top: 10px; color: #666; line-height: 1.8;">
                             <li><strong>Canvas 指纹</strong>：通过绘制隐藏 canvas 并读取像素数据，由于 GPU 和驱动差异，每台设备结果不同</li>
                             <li><strong>WebGL 指纹</strong>：读取 GPU 渲染器信息和 WebGL 参数，这是最强的识别特征之一</li>
@@ -583,7 +583,7 @@
     <div id="webrtc-connection" style="display:none !important;"></div>
     
     <script src="/interpreter-data.js?v=20260430-002"></script>
-    <script src="/interpreter-logic.js?v=20260502-010"></script>
+    <script src="/interpreter-logic.js?v=20260502-011"></script>
 <script>
         // 页面加载后自动采集并解读
         window.addEventListener('DOMContentLoaded', async () => {
@@ -692,5 +692,18 @@
             }
         });
     </script>
+    
+    <!-- 页脚 -->
+    <footer style="text-align: center; padding: 40px 20px; color: #606060; font-size: 14px;">
+        <div style="margin-bottom: 10px;">
+            <span style="color: #00FFFF; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);">🕵️ 布朗探长事务所</span>
+        </div>
+        <div style="font-style: italic; color: #A0A0A0; margin-bottom: 10px;">
+            "任何伪装，都逃不过我的眼睛"
+        </div>
+        <div style="color: #606060;">
+            © 2026 BrowserDetective | 已检测 <span id="detectCount" style="color: #00FFFF;">1,000+</span> 次
+        </div>
+    </footer>
 </body>
 </html>

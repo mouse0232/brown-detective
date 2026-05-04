@@ -388,7 +388,7 @@ function calculatePrivacyScore() {
                           (fingerprintData.headlessRating && fingerprintData.headlessRating > 50);
         if (isHeadless) {
             detailScores.automation += 50;
-            tips.push({ icon: '🚨', title: '检测到无头浏览器', desc: '你正在使用无头模式，这会被所有网站识别为爬虫。' });
+            tips.push({ icon: '🚨', title: '无头浏览器', desc: '你正在使用无头模式，这会被所有网站识别为爬虫。' });
         }
     }
 
@@ -426,7 +426,7 @@ function calculatePrivacyScore() {
         
         if (isCloudIP) {
             detailScores.automation += 30;
-            tips.push({ icon: '☁️', title: '检测到云服务 IP', desc: '你的 IP 属于云服务商（' + network.isp + '），这通常用于爬虫或自动化脚本。建议使用家庭宽带或移动网络。' });
+            tips.push({ icon: '☁️', title: '云服务 IP', desc: '你的 IP 属于云服务商（' + network.isp + '），这通常用于爬虫或自动化脚本。建议使用家庭宽带或移动网络。' });
         }
         
         // 检测时区一致性
@@ -471,17 +471,17 @@ function calculatePrivacyScore() {
     if (totalScore >= 70) level = '高风险 - 非常容易被追踪';
     else if (totalScore >= 50) level = '较高暴露 - 容易被识别';
     else if (totalScore >= 30) level = '中等暴露 - 需要注意';
-    else level = '低暴露 - 隐私保护良好';
+    else level = '低伪装 - 真实浏览器';
     document.getElementById('scoreLevel').textContent = level;
 
     document.getElementById('uniquenessScore').textContent = totalScore >= 50 ? '高 (>95%)' : totalScore >= 30 ? '中 (50-95%)' : '低 (<50%)';
     document.getElementById('stabilityScore').textContent = fingerprintData?.canvas ? '高 (Canvas 特征稳定)' : '中 (可能随时间变化)';
 
     if (tips.length === 0) {
-        tips.push({ icon: '✅', title: '隐私保护良好', desc: '未检测到明显风险。继续保持良好习惯！' });
-        tips.push({ icon: '💡', title: '建议使用隐私浏览器', desc: '考虑使用 Brave、Firefox（严格模式）或 Tor Browser 进一步增强隐私。' });
+        tips.push({ icon: '✅', title: '探长认证', desc: '未检测到明显风险。这是真实浏览器！' });
+        tips.push({ icon: '💡', title: '继续保持', desc: '你的浏览器特征很自然，不需要特别调整。' });
     } else {
-        tips.push({ icon: '💡', title: '防指纹扩展推荐', desc: 'CanvasBlocker、Chameleon、Trace 等扩展可以干扰指纹采集。' });
+        tips.push({ icon: '🛡️', title: '探长的建议', desc: '使用 CanvasBlocker、Chameleon、Trace 等扩展可以干扰指纹采集。' });
     }
 
     const tipsHtml = tips.map(tip => `
