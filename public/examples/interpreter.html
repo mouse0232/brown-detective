@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>浏览器指纹深度解读器 - 专业版</title>
+    <title>布朗探长 - 假浏览器检测仪</title>
     <link rel="stylesheet" href="/style.min.css">
     
     <!-- Cloudflare Turnstile 配置 -->
@@ -12,69 +12,123 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'JetBrains Mono', 'Fira Code', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: #0D0D0D;
+            color: #E0E0E0;
             min-height: 100vh;
             padding: 20px;
         }
         .container { max-width: 1400px; margin: 0 auto; }
         .header {
-            background: white;
+            background: #1A1A1A;
+            border: 1px solid #2D2D2D;
             border-radius: 16px;
             padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
         }
-        .header h1 { color: #667eea; margin-bottom: 10px; font-size: 32px; }
-        .subtitle { color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px; }
+        .header h1 { 
+            color: #00FFFF; 
+            margin-bottom: 10px; 
+            font-size: 32px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        .subtitle { 
+            color: #A0A0A0; 
+            font-size: 16px; 
+            line-height: 1.6; 
+            margin-bottom: 20px;
+            font-style: italic;
+        }
         .data-source {
-            background: #f0f4ff;
-            border: 2px dashed #667eea;
+            background: #1A1A1A;
+            border: 1px dashed #00FFFF;
             border-radius: 12px;
             padding: 20px;
         }
-        .data-source h3 { color: #667eea; margin-bottom: 15px; }
+        .data-source h3 { color: #00FFFF; margin-bottom: 15px; }
         .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
         @media (max-width: 768px) { .input-row { grid-template-columns: 1fr; } }
-        .input-group { background: white; padding: 15px; border-radius: 8px; }
-        .input-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 600; }
+        .input-group { background: #1A1A1A; padding: 15px; border-radius: 8px; border: 1px solid #2D2D2D; }
+        .input-group label { display: block; margin-bottom: 8px; color: #00FFFF; font-weight: 600; }
         .input-group input, .input-group textarea {
-            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
-            font-size: 13px; font-family: 'Courier New', monospace; background: #f8f9ff;
+            width: 100%; padding: 12px; border: 1px solid #2D2D2D; border-radius: 8px;
+            font-size: 13px; font-family: 'Courier New', monospace; background: #0D0D0D; color: #E0E0E0;
         }
-        .input-group textarea { min-height: 120px; resize: vertical; }
+        .input-group input::placeholder, .input-group textarea::placeholder { color: #606060; }
         .input-group input:focus, .input-group textarea:focus {
-            outline: none; border-color: #667eea; background: white;
+            outline: none; border-color: #00FFFF; box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
         button {
-            background: #667eea; color: white; border: none; padding: 12px 24px;
-            border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+            background: transparent; 
+            color: #00FFFF; 
+            border: 2px solid #00FFFF; 
+            padding: 12px 24px;
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            font-family: inherit;
         }
-        button:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
-        button.secondary { background: #48bb78; }
-        button.secondary:hover { background: #38a169; }
-        button.outline { background: transparent; border: 2px solid #667eea; color: #667eea; }
-        button.outline:hover { background: #667eea; color: white; }
+        button:hover { 
+            background: rgba(0, 255, 255, 0.1); 
+            transform: translateY(-2px); 
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        button.secondary { 
+            border-color: #FFD700; 
+            color: #FFD700;
+        }
+        button.secondary:hover { 
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        button.outline { 
+            border-color: #A0A0A0; 
+            color: #A0A0A0;
+        }
+        button.outline:hover { 
+            border-color: #00FFFF;
+            color: #00FFFF;
+        }
         .hidden { display: none !important; }
-        .loading { text-align: center; padding: 60px; color: white; }
+        .loading { 
+            text-align: center; 
+            padding: 60px; 
+            color: #E0E0E0;
+            background: #1A1A1A;
+            border-radius: 16px;
+            border: 1px solid #2D2D2D;
+        }
         .spinner {
-            border: 4px solid rgba(255,255,255,0.3); border-radius: 50%;
-            border-top-color: white; animation: spin 1s linear infinite;
-            width: 50px; height: 50px; margin: 0 auto 20px;
+            border: 4px solid #2D2D2D; 
+            border-radius: 50%;
+            border-top-color: #00FFFF; 
+            animation: spin 1s linear infinite;
+            width: 50px; 
+            height: 50px; 
+            margin: 0 auto 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .results { display: grid; grid-template-columns: 400px 1fr; gap: 20px; margin-bottom: 20px; }
         @media (max-width: 1200px) { .results { grid-template-columns: 1fr; } }
         .score-card {
-            background: white; border-radius: 16px; padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1); height: fit-content;
+            background: #1A1A1A; 
+            border: 1px solid #2D2D2D;
+            border-radius: 16px; 
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            height: fit-content;
         }
         .score-header { text-align: center; margin-bottom: 30px; }
         .score-circle {
             width: 200px; height: 200px; border-radius: 50%;
-            background: conic-gradient(#48bb78 0deg, #48bb78 var(--score-deg), #f0f0f0 var(--score-deg), #f0f0f0 360deg);
+            background: conic-gradient(#00FFFF 0deg, #00FFFF var(--score-deg), #2D2D2D var(--score-deg), #2D2D2D 360deg);
             margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; position: relative;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
         }
         .score-circle::before {
             content: ''; position: absolute; width: 160px; height: 160px;
@@ -169,23 +223,23 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 浏览器指纹深度解读器</h1>
-            <p class="subtitle">专业级浏览器指纹分析工具 - 深入解析每个技术细节，评估可识别性强度，提供隐私保护建议</p>
+            <h1>🕵️ 布朗探长</h1>
+            <p class="subtitle">"让我看看你的真面目..."</p>
             <div class="data-source">
-                <h3>📥 数据导入</h3>
+                <h3>📥 案件委托</h3>
                 <div class="input-row">
                     <div class="input-group">
-                        <label>FP ID（从官方页面复制）</label>
+                        <label>案件编号（FP ID）</label>
                         <input type="text" id="fingerprintIdInput" placeholder="例如：efa0e17daa9c530ec1edeae9d1556dc5...">
                     </div>
                     <div class="input-group">
-                        <label>完整指纹 JSON（推荐，用于深度分析）</label>
+                        <label>完整线索（指纹 JSON）</label>
                         <textarea id="jsonInput" placeholder="官方页面控制台执行：copy(JSON.stringify(window.creep))"></textarea>
                     </div>
                 </div>
                 <div class="btn-group">
-                    <button onclick="analyzeData()">🔍 开始分析</button>
-                    <button class="secondary" onclick="loadFromStorage()">📊 从本地存储加载</button>
+                    <button onclick="analyzeData()">👉 请探长检测</button>
+                    <button class="secondary" onclick="loadFromStorage()">📂 查看上次的检测报告</button>
                     <button class="outline" onclick="generateDemoData()">🎲 生成测试数据</button>
                     <button class="outline" onclick="clearData()">🗑️ 清除数据</button>
                 </div>
@@ -194,50 +248,50 @@
 
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <div id="loadingText">正在分析指纹数据...</div>
+            <div id="loadingText">🔍 探长正在搜集线索...</div>
         </div>
 
         <div id="results" class="hidden">
             <div class="results">
                 <div class="score-card">
                     <div class="score-header">
-                        <h3 style="color: #667eea;">隐私暴露指数</h3>
+                        <h3 style="color: #00FFFF; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);">🎯 伪装指数</h3>
                         <div class="score-circle" style="--score-deg: 0deg;">
                             <div class="score-value" id="privacyScore">0</div>
                         </div>
-                        <div class="score-level" id="scoreLevel">分析中...</div>
+                        <div class="score-level" id="scoreLevel" style="color: #A0A0A0;">探长正在分析...</div>
                     </div>
                     <div class="score-breakdown">
-                        <h4 style="margin-bottom: 15px; color: #333;">风险构成</h4>
-                        <div class="breakdown-item"><span class="breakdown-label">浏览器特征</span><span class="breakdown-value low" id="browserRisk">0</span></div>
-                        <div class="breakdown-item"><span class="breakdown-label">硬件特征</span><span class="breakdown-value" id="hardwareRisk">0</span></div>
-                        <div class="breakdown-item"><span class="breakdown-label">系统特征</span><span class="breakdown-value" id="systemRisk">0</span></div>
-                        <div class="breakdown-item"><span class="breakdown-label">行为特征</span><span class="breakdown-value" id="behaviorRisk">0</span></div>
-                        <div class="breakdown-item"><span class="breakdown-label">自动化风险</span><span class="breakdown-value high" id="automationRisk">0</span></div>
+                        <h4 style="margin-bottom: 15px; color: #00FFFF;">🔍 各维度 trace</h4>
+                        <div class="breakdown-item"><span class="breakdown-label">浏览器 trace</span><span class="breakdown-value low" id="browserRisk">0</span></div>
+                        <div class="breakdown-item"><span class="breakdown-label">硬件 trace</span><span class="breakdown-value" id="hardwareRisk">0</span></div>
+                        <div class="breakdown-item"><span class="breakdown-label">系统 trace</span><span class="breakdown-value" id="systemRisk">0</span></div>
+                        <div class="breakdown-item"><span class="breakdown-label">行为 trace</span><span class="breakdown-value" id="behaviorRisk">0</span></div>
+                        <div class="breakdown-item"><span class="breakdown-label">自动化 trace</span><span class="breakdown-value high" id="automationRisk">0</span></div>
                     </div>
-                    <div style="margin-top: 25px; padding: 15px; background: #f8f9ff; border-radius: 8px;">
-                        <h4 style="margin-bottom: 10px; color: #667eea;">📊 统计</h4>
+                    <div style="margin-top: 25px; padding: 15px; background: #1A1A1A; border-radius: 8px; border: 1px solid #2D2D2D;">
+                        <h4 style="margin-bottom: 10px; color: #00FFFF;">📊 案件统计</h4>
                         <div class="breakdown-item"><span class="breakdown-label">唯一性</span><span class="breakdown-value" id="uniquenessScore">-</span></div>
                         <div class="breakdown-item"><span class="breakdown-label">稳定性</span><span class="breakdown-value" id="stabilityScore">-</span></div>
-                        <div class="breakdown-item"><span class="breakdown-label">采集耗时</span><span class="breakdown-value" id="collectionTime">-</span></div>
+                        <div class="breakdown-item"><span class="breakdown-label">检测用时</span><span class="breakdown-value" id="collectionTime">-</span></div>
                     </div>
-                    <!-- 🛡️ 安全监控面板（移到隐私指数下方） -->
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
-                        <h4 style="color: #667eea; margin-bottom: 15px;">🛡️ 安全监控</h4>
+                    <!-- 🔍 探长的线索墙 -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #2D2D2D;">
+                        <h4 style="color: #00FFFF; margin-bottom: 15px;">🔍 探长的线索墙</h4>
                         <div id="monitorStatus" style="margin-bottom: 15px;">
-                            <div style="color:#666;font-size:14px;">🔄 检测中...</div>
+                            <div style="color:#606060;font-size:14px;">⏳ 探长正在检查...</div>
                         </div>
                         <div id="proxyWarning" class="hidden" style="margin-bottom: 15px;"></div>
-                        <div style="padding:12px;background:#f8f9fa;border-radius:6px;">
-                            <div style="font-size:12px;color:#666;line-height:2;">
-                                <div><strong>• 只读属性：</strong><span id="check-readonly" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• API Hook：</strong><span id="check-apihook" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• 指纹浏览器：</strong><span id="check-fingerprint-browser" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• UA 逻辑：</strong><span id="check-ua" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• WebGL：</strong><span id="check-webgl" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• 原型链：</strong><span id="check-prototype" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• Canvas 一致性：</strong><span id="check-canvas" style="margin-left:6px;">🔄 检测中</span></div>
-                                <div><strong>• 代理头：</strong><span id="check-proxy" style="margin-left:6px;">🔄 检测中</span></div>
+                        <div style="padding:12px;background:#1A1A1A;border-radius:6px; border: 1px solid #2D2D2D;">
+                            <div style="font-size:12px;color:#A0A0A0;line-height:2;">
+                                <div><strong>• 只读属性：</strong><span id="check-readonly" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• API Hook：</strong><span id="check-apihook" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• 指纹浏览器：</strong><span id="check-fingerprint-browser" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• UA 逻辑：</strong><span id="check-ua" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• WebGL：</strong><span id="check-webgl" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• 原型链：</strong><span id="check-prototype" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• Canvas 一致性：</strong><span id="check-canvas" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
+                                <div><strong>• 代理头：</strong><span id="check-proxy" style="margin-left:6px;">⏳ 探长正在检查...</span></div>
                             </div>
                         </div>
                     </div>
@@ -529,7 +583,7 @@
     <div id="webrtc-connection" style="display:none !important;"></div>
     
     <script src="/interpreter-data.js?v=20260430-002"></script>
-    <script src="/interpreter-logic.js?v=20260502-009"></script>
+    <script src="/interpreter-logic.js?v=20260502-010"></script>
 <script>
         // 页面加载后自动采集并解读
         window.addEventListener('DOMContentLoaded', async () => {
