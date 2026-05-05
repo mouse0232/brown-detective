@@ -254,7 +254,7 @@ async function checkProxyRisk() {
     }
     
     try {
-        const res = await fetch('/api/risk-check', {
+        const res = await fetch('../api/risk-check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
