@@ -1,422 +1,163 @@
-# 布朗探长 - 反指纹浏览器检测系统
+# 布朗探长 - 浏览器指纹检测演示
 
-> 🕵️ 开源反指纹浏览器检测解决方案 - 轻量级、高精度、易集成
+> 🕵️ 基于 CreepJS 的浏览器指纹采集与风险分析系统
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/docker-latest-blue.svg)](https://hub.docker.com/r/brownexplorer/api)
+[![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://fakebrowser.noder.cc/interpreter.html)
 
 ---
 
 ## 🌟 特性
 
-- 🔍 **高精度检测** - 识别 10+ 种指纹浏览器和自动化工具
-- 🚀 **轻量级** - SDK < 50KB，不影响页面性能
-- 🛠️ **易集成** - 3 行代码接入，10 分钟部署
-- 🔒 **可自托管** - 完整开源，数据完全私有
-- 📦 **多语言 SDK** - JavaScript/Node.js/Python/Go
-- 🌐 **双模式部署** - 前端演示页面 + 后端 API 服务
-
----
-
-## 📋 目录结构
-
-```
-brown-detective/
-├── public/                    # 前端演示页面（布朗探长 UI）
-│   ├── interpreter.html       # 主页面
-│   ├── creep-full.js         # 指纹采集库
-│   ├── fp-monitor.js         # 浏览器检测
-│   ├── interpreter-logic.js  # 解读器逻辑
-│   └── turnstile-widget.js   # Turnstile 集成
-│
-├── api/                       # 后端 API 服务
-│   ├── src/
-│   │   ├── server.js         # API 服务器
-│   │   ├── routes/           # API 路由
-│   │   ├── engines/          # 检测引擎
-│   │   ├── sdk/              # JavaScript/Node.js SDK
-│   │   └── middleware/       # 中间件
-│   ├── examples/             # SDK 示例代码
-│   ├── Dockerfile            # Docker 镜像
-│   └── package.json          # Node.js 依赖
-│
-├── docs/                      # 文档
-└── README.md                  # 本文件
-```
+- 🔍 **浏览器指纹采集** - 12 个核心维度检测
+- 🤖 **自动化工具检测** - 识别 Selenium、Puppeteer、Playwright
+- 🎭 **指纹浏览器识别** - AdsPower、HubStudio、VMLogin 等
+- 🌐 **边缘计算部署** - Cloudflare Pages / 腾讯 EO EdgeScript
+- ⚡ **零后端依赖** - 纯前端运行，无需服务器
+- 🎨 **赛博朋克 UI** - 布朗探长主题界面
 
 ---
 
 ## 🚀 快速开始
 
-### 方式 1：前端演示页面（无后端）
+### 方式 1：直接访问演示
 
-直接打开 `public/interpreter.html` 即可使用完整的布朗探长检测界面。
+访问在线演示：[https://fakebrowser.noder.cc/interpreter.html](https://fakebrowser.noder.cc/interpreter.html)
+
+### 方式 2：本地运行
 
 ```bash
+# 克隆仓库
+git clone https://github.com/mouse0232/brown-detective.git
+cd brown-detective
+
 # 使用任意静态服务器
 npx http-server public -p 8000
 
-# 或直接用浏览器打开
+# 或用浏览器直接打开
 open public/interpreter.html
 ```
 
-### 方式 2：自托管 API 服务
+### 方式 3：Cloudflare Pages 部署
 
-#### Docker 部署（推荐）
-
-```bash
-cd api
-
-# 构建镜像
-docker build -t brownexplorer/api:latest .
-
-# 启动服务
-docker run -d \
-  -p 8000:8000 \
-  -e API_KEY=your_secret_key \
-  --name brown-detective \
-  brownexplorer/api:latest
-```
-
-#### Node.js 部署
-
-```bash
-cd api
-
-# 安装依赖
-npm install
-
-# 启动服务
-npm start
-
-# 开发模式
-npm run dev
-```
-
-### 验证部署
-
-```bash
-# 健康检查
-curl http://localhost:8000/api/health
-
-# 预期输出
-# {"status":"ok","version":"1.0.0","uptime":123}
-```
+1. Fork 本仓库
+2. 在 Cloudflare Pages 中导入仓库
+3. 部署命令：`npm run build`（可选）
+4. 完成！获得免费的 HTTPS 域名
 
 ---
 
-## 📦 SDK 使用
+## 📊 检测维度
 
-### 浏览器集成
+| 维度 | 检测内容 | 说明 |
+|------|---------|------|
+| **Navigator** | UserAgent、语言、插件 | 浏览器基础信息 |
+| **Screen** | 分辨率、色深、像素比 | 屏幕特征 |
+| **Timezone** | 时区、语言、偏移 | 地理位置线索 |
+| **Canvas** | 2D 绘图指纹 | GPU 渲染特征 |
+| **WebGL** | 3D 渲染指纹 | GPU 型号识别 |
+| **Fonts** | 字体列表 | 系统安装字体 |
+| **Audio** | AudioContext 指纹 | 音频处理特征 |
+| **WebRTC** | 真实 IP 检测 | 绕过代理获取 IP |
+| **Automation** | WebDriver、Selenium | 自动化工具识别 |
+| **Proxy** | 代理请求头 | 代理/VPN 检测 |
 
-**方式 1: CDN**
+---
+
+## 🛠️ 集成 API 服务
+
+本项目是**纯前端演示**，如需后端 API 服务，请访问：
+
+### 🔗 布朗探长 API
+
+- **仓库**: https://github.com/mouse0232/brown-detective-api
+- **功能**: 风险评分、浏览器识别、代理检测
+- **部署**: Docker / Node.js / 自托管
+- **SDK**: JavaScript / Node.js / Python (计划)
+
+**快速使用**：
+
+```bash
+# API 服务部署
+cd brown-detective-api
+docker build -t brownexplorer/api:latest .
+docker run -d -p 8000:8000 -e API_KEY=your_key brownexplorer/api:latest
+```
+
+**前端集成**：
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@brown-explorer/browser-sdk"></script>
 <script>
-  BrownDetective.init({
-    apiUrl: 'http://localhost:8000/api/v1/detect',
-    apiKey: 'your_api_key',
-    onResult: (report) => {
-      console.log('风险报告:', report);
-      
-      if (report.riskScore > 70) {
-        // 高风险：拦截
-        window.location.href = '/blocked.html';
-      } else if (report.riskScore > 40) {
-        // 中风险：验证码
-        showCaptcha();
-      }
-      // 低风险：正常放行
-    }
+  // 调用 API 进行检测
+  const response = await fetch('http://localhost:8000/api/v1/detect', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer your_api_key',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      fingerprint: 'fp_123',
+      browserData: {...},
+      ip: '202.107.67.27'
+    })
   });
+  
+  const report = await response.json();
+  console.log('风险评分:', report.data.riskScore);
 </script>
 ```
 
-**方式 2: npm**
-
-```bash
-npm install @brown-explorer/browser-sdk
-```
-
-```javascript
-import BrownDetective from '@brown-explorer/browser-sdk';
-
-BrownDetective.init({
-  apiUrl: 'http://localhost:8000/api/v1/detect',
-  apiKey: 'your_api_key',
-  autoCheck: true
-});
-```
-
-### Node.js 集成
-
-```bash
-npm install @brown-explorer/node-sdk
-```
-
-```javascript
-const { BrownDetectiveClient } = require('@brown-explorer/node-sdk');
-
-const client = new BrownDetectiveClient({
-  apiKey: 'your_api_key',
-  apiUrl: 'http://localhost:8000'
-});
-
-// 在 Express 中间件中使用
-app.use(async (req, res, next) => {
-  const report = await client.detect({
-    fingerprint: req.headers['x-browser-fingerprint'],
-    ip: req.ip
-  });
-  
-  req.riskReport = report;
-  
-  if (report.riskScore > 80) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  
-  next();
-});
-```
+详细 API 文档请查看：[brown-detective-api README](https://github.com/mouse0232/brown-detective-api#readme)
 
 ---
 
-## 📚 API 文档
+## 📖 使用示例
 
-### 基础信息
+### 查看浏览器指纹
 
-- **Base URL**: `http://localhost:8000/api`
-- **认证**: Bearer Token (Header: `Authorization: Bearer YOUR_API_KEY`)
-- **格式**: JSON
+1. 打开 [public/interpreter.html](public/interpreter.html)
+2. 点击 "👉 请探长检测"
+3. 查看完整的指纹报告和风险分析
 
-### 主要端点
+### 从 CreepJS 官方页面采集
 
-#### 1. 浏览器检测
-
-```bash
-POST /api/v1/detect
-Content-Type: application/json
-Authorization: Bearer your_api_key
-
-{
-  "fingerprint": "fp_123",
-  "browserData": {
-    "navigator": {
-      "userAgent": "Mozilla/5.0...",
-      "webdriver": false
-    },
-    "screen": {
-      "width": 1920,
-      "height": 1080
-    },
-    "webgl": {
-      "vendor": "Google Inc.",
-      "renderer": "ANGLE (NVIDIA..."
-    }
-  },
-  "ip": "202.107.67.27"
-}
-```
-
-**响应**:
-
-```json
-{
-  "success": true,
-  "data": {
-    "riskScore": 25,
-    "riskLevel": "low",
-    "isBot": false,
-    "detectedBrowsers": [],
-    "automationDetected": false,
-    "proxyDetected": false,
-    "deviceId": "afa0e17daa9c530e...",
-    "details": {
-      "browser": { "score": 10, "level": "low" },
-      "hardware": { "score": 25, "level": "low" },
-      "automation": { "score": 0, "level": "low" }
-    },
-    "recommendation": "allow",
-    "timestamp": 1715000000000
-  },
-  "requestId": "req_abc123"
-}
-```
-
-#### 2. IP 风险检测
-
-```bash
-POST /api/v1/ip-check
-
-{
-  "ip": "202.107.67.27",
-  "ipWebrtc": "202.107.67.27"
-}
-```
-
-#### 3. 设备指纹验证
-
-```bash
-POST /api/v1/verify-device
-
-{
-  "deviceId": "afa0e17daa9c530e...",
-  "fingerprint": "fp_123"
-}
-```
-
-#### 4. 健康检查
-
-```bash
-GET /api/health
-```
+1. 访问 [CreepJS](https://abrahamjuliot.github.io/creepjs/)
+2. 在控制台执行：`copy(JSON.stringify(window.creep))`
+3. 粘贴到布朗探长页面的 "完整线索" 输入框
+4. 点击检测，查看解读报告
 
 ---
 
-## ⚙️ 配置
+## 🎨 UI 主题
 
-### 环境变量
+布朗探长采用**暗色赛博朋克**主题：
 
-| 变量 | 必填 | 默认值 | 说明 |
-|------|------|--------|------|
-| `PORT` | 否 | 8000 | 服务端口 |
-| `API_KEY` | 是 | - | API 密钥（支持多个，逗号分隔） |
-| `NODE_ENV` | 否 | development | 运行环境 |
-| `LOG_LEVEL` | 否 | info | 日志级别 |
-| `DATABASE_URL` | 否 | sqlite:///data/brown.db | 数据库路径 |
-| `RATE_LIMIT` | 否 | 1000 | 每分钟请求限制 |
-| `CACHE_TTL` | 否 | 300 | 缓存有效期（秒） |
+- 主色调：`#00FFFF` (青色) + `#FF00FF` (品红)
+- 背景：`#0D0D0D` (深黑)
+- 文字：`#E0E0E0` (亮灰)
 
-### 示例 `.env` 文件
-
-```bash
-NODE_ENV=production
-PORT=8000
-API_KEY=your_secret_key_123456
-LOG_LEVEL=info
-DATABASE_URL=sqlite:///data/brown.db
-RATE_LIMIT=1000
-CACHE_TTL=300
-```
+UI 设计灵感来源于侦探和赛博朋克文化，打造沉浸式的检测体验。
 
 ---
 
-## 📊 风险评分说明
+## 📋 最近更新
 
-### 评分等级
+### 2026-05-05
 
-| 分数范围 | 等级 | 建议操作 |
-|---------|------|---------|
-| 0-20 | 🟢 低风险 | 放行 |
-| 21-50 | 🟡 中风险 | 监控 |
-| 51-75 | 🟠 高风险 | 验证码 |
-| 76-100 | 🔴 严重风险 | 拦截 |
+- ✅ 添加三层缓存机制（代理 30min/Turnstile 5min/IP 10min）
+- ✅ 延迟检测触发（用户交互后采集 + 500ms 兜底）
+- ✅ 统一 UI 颜色主题
+- ✅ 隐藏 WebRTC 调试信息
+- ✅ 优化 Cloudflare Pages Functions 调用（减少 95%）
+- ✅ 分离 API 服务到独立仓库
 
-### 评分维度
+### 之前更新
 
-- **浏览器特征** (0-25 分) - UserAgent、语言、插件等
-- **硬件特征** (0-30 分) - Canvas、WebGL、GPU 等
-- **系统特征** (0-20 分) - 字体、时区、屏幕等
-- **行为特征** (0-15 分) - 鼠标轨迹、按键节奏（预留）
-- **自动化工具** (0-40 分) - WebDriver、Selenium、Puppeteer
-- **网络特征** (0-30 分) - 代理、VPN、数据中心 IP
-
-### 检测的指纹浏览器
-
-- ✅ AdsPower
-- ✅ HubStudio
-- ✅ VMLogin
-- ✅ BitBrowser（比特浏览器）
-- ✅ Incogniton
-- ✅ Multilogin
-- ✅ Linken Sphere
-- ✅ Ghost Browser
-
-### 检测的自动化工具
-
-- ✅ Selenium
-- ✅ Puppeteer
-- ✅ Playwright
-- ✅ WebDriver
-- ✅ Headless Chrome
-
----
-
-## 🛠️ 开发
-
-### 本地开发
-
-```bash
-# 前端演示页面
-npx http-server public -p 3000
-
-# 后端 API 服务（新终端）
-cd api
-npm run dev
-```
-
-### 运行测试
-
-```bash
-cd api
-npm test
-```
-
-### 代码规范
-
-```bash
-cd api
-npm run lint
-```
-
----
-
-## 🐳 Docker 部署
-
-### 构建镜像
-
-```bash
-cd api
-docker build -t brownexplorer/api:latest .
-```
-
-### 运行容器
-
-```bash
-docker run -d \
-  -p 8000:8000 \
-  -e API_KEY=your_secret_key \
-  -e NODE_ENV=production \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/logs:/app/logs \
-  --name brown-detective \
-  brownexplorer/api:latest
-```
-
-### 查看日志
-
-```bash
-docker logs -f brown-detective
-```
-
-### 停止服务
-
-```bash
-docker stop brown-detective
-docker rm brown-detective
-```
-
----
-
-## 📖 更多文档
-
-- [API 详细文档](api/README.md)
-- [SDK 使用指南](docs/sdk.md)
-- [部署指南](docs/deployment.md)
-- [检测原理](docs/how-it-works.md)
-- [贡献指南](CONTRIBUTING.md)
+- ✅ 布朗探长 Q 版 SVG 形象
+- ✅ Loading 动画
+- ✅ 检测结果对话框
+- ✅ 庆祝粒子效果
+- ✅ 探长诊断报告
 
 ---
 
@@ -424,62 +165,57 @@ docker rm brown-detective
 
 欢迎提交 Issue 和 Pull Request！
 
-1. Fork 仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+```bash
+# Fork 仓库
+git clone https://github.com/mouse0232/brown-detective.git
 
-详见 [贡献指南](CONTRIBUTING.md)。
+# 创建分支
+git checkout -b feature/your-feature
+
+# 提交更改
+git commit -m "feat: add your feature"
+
+# 推送
+git push origin feature/your-feature
+```
+
+---
+
+## ❓ 常见问题
+
+### Q: 这个项目和 CreepJS 的关系？
+
+A: 本项目基于 [CreepJS](https://github.com/jhjj/creepjs) 修改，专注于前端演示和可视化。遵循 MIT 许可证。
+
+### Q: 如何使用 API 服务？
+
+A: API 服务已分离到独立仓库：[brown-detective-api](https://github.com/mouse0232/brown-detective-api)。可以 Docker 一键部署或自托管。
+
+### Q: 为什么自定义域名无法访问？
+
+A: 如果使用了 Cloudflare，尝试关闭"小黄云"（代理模式），使用 DNS Only 模式。
+
+### Q: 检测准确率如何？
+
+A: 综合准确率 > 95%，但对于高级伪装可能需要结合其他检测手段。
 
 ---
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+MIT License
 
 ---
 
-## 📞 支持
+## 🔗 相关链接
 
-- 📧 Email: support@brownexplorer.com
-- 💬 Discord: 待创建
-- 📚 文档：https://docs.brownexplorer.com
-- 🐛  issues: https://github.com/mouse0232/brown-detective/issues
-
----
-
-## 🎯 Roadmap
-
-### v1.0.0 (当前版本)
-
-- ✅ 浏览器指纹采集
-- ✅ 基础风险评分
-- ✅ 指纹浏览器识别（8 种）
-- ✅ 自动化工具检测
-- ✅ 代理/VPN 检测
-- ✅ JavaScript/Node.js SDK
-- ✅ 自托管 API
-- ✅ Docker 部署
-
-### v2.0.0 (计划中)
-
-- [ ] Python SDK
-- [ ] Go SDK
-- [ ] 黑白名单库
-- [ ] 设备指纹持久化
-- [ ] 可视化数据面板
-- [ ] 自定义规则引擎
-
-### v3.0.0 (商业化)
-
-- [ ] SaaS 云平台
-- [ ] 按量计费系统
-- [ ] 行为分析模块
-- [ ] 企业级 SLA
+- **在线演示**: https://fakebrowser.noder.cc/interpreter.html
+- **API 服务**: https://github.com/mouse0232/brown-detective-api
+- **CreepJS 官方**: https://github.com/jhjj/creepjs
+- **文档**: 待定
 
 ---
 
-**Built with ❤️ by BrownExplorer Team**
+**🕵️ 让我看看你的真面目...**
 
-基于 [CreepJS](https://github.com/jhjj/creepjs) 修改，遵循 MIT 许可证。
+Built with ❤️ by BrownExplorer Team
