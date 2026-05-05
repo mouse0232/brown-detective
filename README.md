@@ -1,6 +1,6 @@
 # 布朗探长 - 浏览器指纹检测演示
 
-> 🕵️ 基于 CreepJS 的浏览器指纹采集与风险分析系统
+> 🕵️ 专业的浏览器指纹采集与风险分析系统
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://fakebrowser.noder.cc/interpreter.html)
@@ -117,14 +117,13 @@ docker run -d -p 8000:8000 -e API_KEY=your_key brownexplorer/api:latest
 
 1. 打开 [public/interpreter.html](public/interpreter.html)
 2. 点击 "👉 请探长检测"
-3. 查看完整的指纹报告和风险分析
+3. 等待 3-5 秒，查看完整的指纹报告和风险分析
 
-### 从 CreepJS 官方页面采集
+### 粘贴外部数据检测
 
-1. 访问 [CreepJS](https://abrahamjuliot.github.io/creepjs/)
-2. 在控制台执行：`copy(JSON.stringify(window.creep))`
-3. 粘贴到布朗探长页面的 "完整线索" 输入框
-4. 点击检测，查看解读报告
+1. 从其他指纹采集工具获取 JSON 数据
+2. 粘贴到布朗探长页面的 "完整线索" 输入框
+3. 点击检测，查看解读报告
 
 ---
 
@@ -183,9 +182,9 @@ git push origin feature/your-feature
 
 ## ❓ 常见问题
 
-### Q: 这个项目和 CreepJS 的关系？
+### Q: 这个项目的技术原理？
 
-A: 本项目基于 [CreepJS](https://github.com/jhjj/creepjs) 修改，专注于前端演示和可视化。遵循 MIT 许可证。
+A: 基于浏览器指纹技术，通过采集 Canvas、WebGL、Fonts、Navigator 等多个维度的特征，生成唯一的设备标识。结合自动化检测和代理检测，识别可疑浏览器。
 
 ### Q: 如何使用 API 服务？
 
@@ -211,8 +210,7 @@ MIT License
 
 - **在线演示**: https://fakebrowser.noder.cc/interpreter.html
 - **API 服务**: https://github.com/mouse0232/brown-detective-api
-- **CreepJS 官方**: https://github.com/jhjj/creepjs
-- **文档**: 待定
+- **问题反馈**: https://github.com/mouse0232/brown-detective/issues
 
 ---
 
