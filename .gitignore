@@ -3,6 +3,11 @@ node_modules
 package-lock.json
 public/creep.js
 public/creep.js.map
-public/creepworker.js
+public/creep-worker.js
 public/style.prefix.css
 notes.md
+
+# API 服务
+api/node_modules/
+api/logs/
+api/data/
