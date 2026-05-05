@@ -135,7 +135,7 @@
         }
         
         try {
-            const res = await fetch('../api/verify-turnstile', {
+            const res = await fetch('/api/verify-turnstile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token })

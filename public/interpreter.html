@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>布朗探长 - 假浏览器检测仪</title>
-    <link rel="stylesheet" href="../detective-loading.css">
-    <link rel="icon" type="image/svg+xml" href="../detective-brown.svg">
+    <link rel="stylesheet" href="/detective-loading.css">
+    <link rel="icon" type="image/svg+xml" href="/detective-brown.svg">
     
     <!-- Cloudflare Turnstile 配置 -->
     <meta name="turnstile-sitekey" content="0x4AAAAAADHQhnhFQNalGnoM">
@@ -545,10 +545,10 @@
         }
     </style>
     
-    <script src="../fp-monitor.js?v=20260502"></script>
+    <script src="/fp-monitor.js?v=20260502"></script>
     
     <!-- Cloudflare Turnstile Widget -->
-    <script src="../turnstile-widget.js?v=20260502"></script>
+    <script src="/turnstile-widget.js?v=20260502"></script>
     
     <script>
         // Pages Functions + WebRTC 双 IP 对比检测代理
@@ -623,7 +623,7 @@
         // 获取地理位置
         async function fetchIPGeo(ip) {
             try {
-                const res = await fetch(`../api/ip-geo?ip=${ip}`);
+                const res = await fetch(`/api/ip-geo?ip=${ip}`);
                 if (res.ok) {
                     const data = await res.json();
                     return data;
@@ -663,7 +663,7 @@
                 console.log('[IP] WebRTC IP:', webrtcIP);
                 
                 // 2. 获取 Cloudflare 看到的 IP（CDN 出口）
-                const cfRes = await fetch(`../api/ip-info`);
+                const cfRes = await fetch('/api/ip-info');
                 const cfData = await cfRes.ok ? await cfRes.json() : null;
                 const httpIP = cfData?.ip || null;
                 console.log('[IP] Cloudflare IP:', httpIP);
@@ -728,7 +728,7 @@
                 
                 // 6. 风险检测（代理头 + IP 风险）
                 try {
-                    const riskRes = await fetch(`../api/risk-check`);
+                    const riskRes = await fetch('/api/risk-check');
                     const riskData = await riskRes.json();
                     window.IPInfo.risk = riskData;
                     
@@ -799,11 +799,11 @@
         })();
     </script>
 
-    <script src="../creep-full.js?v=20260430-002"></script>
+    <script src="/creep-full.js?v=20260430-002"></script>
     <!-- creep-full.js 需要的隐藏容器 -->
     
-    <script src="../interpreter-data.js?v=20260430-002"></script>
-    <script src="../interpreter-logic.js?v=20260502-012"></script>
+    <script src="/interpreter-data.js?v=20260430-002"></script>
+    <script src="/interpreter-logic.js?v=20260502-012"></script>
 <script>
         // 页面加载后自动采集并解读（延迟触发，等待用户交互）
         window.addEventListener('DOMContentLoaded', async () => {
