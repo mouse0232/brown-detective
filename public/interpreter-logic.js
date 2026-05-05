@@ -232,10 +232,26 @@ function updateMonitorStatus() {
 }
 
 /**
- * 调用后端代理风险检测 API
+ * 调用后端代理风险检测 API（带 30 分钟缓存）
  */
 async function checkProxyRisk() {
     if (window.ProxyRiskScore !== undefined) return; // 避免重复调用
+    
+    // 检查 localStorage 缓存（30 分钟）
+    try {
+        const cached = localStorage.getItem('proxyRiskCache');
+        if (cached) {
+            const { score, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < 1800000) { // 30 分钟
+                console.log('[Proxy] 使用缓存数据:', score);
+                window.ProxyRiskScore = score;
+                updateProxyDisplay();
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('[Proxy] 缓存读取失败:', e);
+    }
     
     try {
         const res = await fetch('/api/risk-check', {
@@ -246,15 +262,18 @@ async function checkProxyRisk() {
         const result = await res.json();
         window.ProxyRiskScore = result.riskScore || 0;
         
-        // 更新检测结果
-        const checkEl = document.getElementById('check-proxy');
-        if (checkEl) {
-            if (window.ProxyRiskScore > 0) {
-                checkEl.innerHTML = `❌ 异常 <span style="color:#999;font-size:12px;">(风险分：${window.ProxyRiskScore})</span>`;
-            } else {
-                checkEl.innerHTML = '✅ 正常';
-            }
+        // 写入缓存
+        try {
+            localStorage.setItem('proxyRiskCache', JSON.stringify({
+                score: window.ProxyRiskScore,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.warn('[Proxy] 缓存写入失败:', e);
         }
+        
+        // 更新检测结果
+        updateProxyDisplay();
         
         // 更新监控总状态
         updateMonitorStatus();
@@ -262,6 +281,20 @@ async function checkProxyRisk() {
     } catch (e) {
         console.error('[Proxy] 检测失败:', e);
         window.ProxyRiskScore = 0;
+    }
+}
+
+/**
+ * 更新代理检测显示
+ */
+function updateProxyDisplay() {
+    const checkEl = document.getElementById('check-proxy');
+    if (checkEl && window.ProxyRiskScore !== undefined) {
+        if (window.ProxyRiskScore > 0) {
+            checkEl.innerHTML = `❌ 异常 <span style="color:#999;font-size:12px;">(风险分：${window.ProxyRiskScore})</span>`;
+        } else {
+            checkEl.innerHTML = '✅ 正常';
+        }
     }
 }
 

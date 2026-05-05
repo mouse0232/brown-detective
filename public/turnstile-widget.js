@@ -116,9 +116,24 @@
     }
     
     /**
-     * 验证 token（发送到后端）
+     * 验证 token（发送到后端）- 带 5 分钟缓存
      */
     async function verifyToken(token) {
+        // 检查缓存（5 分钟）
+        try {
+            const cached = localStorage.getItem('turnstileCache');
+            if (cached) {
+                const { result, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp < 300000) { // 5 分钟
+                    console.log('[Turnstile] 使用缓存验证结果');
+                    window.TurnstileResult = result;
+                    return result;
+                }
+            }
+        } catch (e) {
+            console.warn('[Turnstile] 缓存读取失败:', e);
+        }
+        
         try {
             const res = await fetch('/api/verify-turnstile', {
                 method: 'POST',
@@ -131,6 +146,16 @@
             
             // 保存到全局
             window.TurnstileResult = result;
+            
+            // 写入缓存
+            try {
+                localStorage.setItem('turnstileCache', JSON.stringify({
+                    result,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                console.warn('[Turnstile] 缓存写入失败:', e);
+            }
             
             return result;
             
