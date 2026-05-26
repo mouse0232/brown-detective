@@ -169,7 +169,7 @@ EOF
       
       - name: Create issue if update available
         if: steps.check.outputs.update_available == 'true'
-        uses: peter-evans/create-issue-from-file@v5
+        uses: peter-evans/create-issue-from-file@v6
         with:
           title: '🔄 [Auto] CreepJS 官方版本更新检测'
           content-filepath: .github/UPDATE_TEMPLATE.md
