@@ -254,10 +254,7 @@ async function checkProxyRisk() {
     }
     
     try {
-        const res = await fetch('/api/risk-check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
+        const res = await fetch('/api/risk-check');
         
         const result = await res.json();
         window.ProxyRiskScore = result.riskScore || 0;
